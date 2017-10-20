@@ -17,7 +17,7 @@ type myLoaderGenerator struct {
 	qps           uint32
 	status        uint32
 	duration      time.Duration
-	pool          LoaderPool
+	pool          LoaderTicketPool
 	ctx           context.Context
 	cancelFunc    context.CancelFunc
 	callCount     int64
@@ -40,7 +40,7 @@ func (mlg *myLoaderGenerator) init() {
 }
 
 func (mlg *myLoaderGenerator) Start() bool {
-	log.Println("Starting DNS Loader...")
+	log.Println("Starting Loader...")
 	mlg.ctx, mlg.cancelFunc = context.WithTimeout(context.Background(), mlg.duration)
 	mlg.callCount = 0
 	currentStatus := mlg.Status()
@@ -57,7 +57,7 @@ func (mlg *myLoaderGenerator) Start() bool {
 	}
 
 	atomic.StoreUint32(&mlg.status, STATUS_STARTED)
-	log.Println("Setting Done For DNS Loader")
+	log.Println("Setting Done For Loader")
 
 	go func() {
 		log.Println("Create New Goroutine TO Generating Load")
@@ -137,6 +137,9 @@ func (mlg *myLoaderGenerator) sendNewRequest() {
 				Msg:    rawResponse.Err.Error(),
 				Elapse: rawResponse.Elapse,
 			}
+		} else {
+			result = mlg.caller.CheckResp(rawRequest, *rawResponse)
+			result.Elapse = rawResponse.Elapse
 		}
 		mlg.collectResult(result)
 	}()
@@ -225,6 +228,8 @@ func (mlg *myLoaderGenerator) CallCount() int64 {
 	return atomic.LoadInt64(&mlg.callCount)
 }
 
+// NewLoaderGenerator will return a new instance of generator
+// using param from GeneratorParam
 func NewLoaderGenerator(param GeneratorParam) (Generator, error) {
 	log.Println("New Load Generator")
 	if err := param.ValidCheck(); err != nil {
@@ -233,7 +238,7 @@ func NewLoaderGenerator(param GeneratorParam) (Generator, error) {
 	mlg := &myLoaderGenerator{
 		caller:        param.Caller,
 		timeout:       param.Timeout,
-		qps:           param.Qps,
+		qps:           param.QPS,
 		duration:      param.Duration,
 		status:        STATUS_ORIGINAL,
 		resultChannel: param.ResultChannel,

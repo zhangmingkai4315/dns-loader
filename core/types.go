@@ -9,10 +9,13 @@ import (
 	"time"
 )
 
+// RawRequest define the raw request with raw bytes
 type RawRequest struct {
 	ID  int64
 	Req []byte
 }
+
+// RawResponse define the raw result from call function
 type RawResponse struct {
 	ID     int64
 	Resp   []byte
@@ -20,10 +23,11 @@ type RawResponse struct {
 	Elapse time.Duration
 }
 
+// CallResult define the result struct from call function
 type CallResult struct {
 	ID     int64
 	Req    RawRequest
-	Resq   RawResponse
+	Resp   RawResponse
 	Code   ReturnCode
 	Msg    string
 	Elapse time.Duration
@@ -44,10 +48,11 @@ type Caller interface {
 	CheckResp(rawReq RawRequest, rawResp RawResponse) *CallResult
 }
 
+// GeneratorParam will be used to new a generator instance as a param
 type GeneratorParam struct {
 	Caller        Caller
 	Timeout       time.Duration
-	Qps           uint32
+	QPS           uint32
 	Duration      time.Duration
 	ResultChannel chan *CallResult
 }
@@ -60,7 +65,7 @@ func (param *GeneratorParam) ValidCheck() error {
 	if param.Timeout == 0 {
 		errMsgs = append(errMsgs, "Invalid timeout!")
 	}
-	if param.Qps == 0 {
+	if param.QPS == 0 {
 		errMsgs = append(errMsgs, "Invalid qps(query per second)!")
 	}
 	if param.Duration == 0 {
@@ -70,7 +75,7 @@ func (param *GeneratorParam) ValidCheck() error {
 		errMsgs = append(errMsgs, "Invalid result channel!")
 	}
 	var buf bytes.Buffer
-	buf.WriteString("Checking the parameters...\n")
+	buf.WriteString("Checking the parameters...")
 	if errMsgs != nil {
 		errMsg := strings.Join(errMsgs, " ")
 		buf.WriteString(fmt.Sprintf("NOT passed! (%s)\n", errMsg))
@@ -78,8 +83,8 @@ func (param *GeneratorParam) ValidCheck() error {
 		return errors.New(errMsg)
 	}
 	buf.WriteString(
-		fmt.Sprintf("Passed. (timeout=%s, qps=%d, duration=%s)\n",
-			param.Timeout, param.Qps, param.Duration))
+		fmt.Sprintf("Passed. (timeout=%s, qps=%d, duration=%s)",
+			param.Timeout, param.QPS, param.Duration))
 	log.Println(buf.String())
 	return nil
 }

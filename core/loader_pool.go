@@ -1,7 +1,7 @@
 // Package core provides core for dns load generator
 package core
 
-type LoaderPool interface {
+type LoaderTicketPool interface {
 	Get()
 	Return()
 	Active() bool
@@ -9,33 +9,33 @@ type LoaderPool interface {
 	Remainder() uint32
 }
 
-type myLoaderPool struct {
+type myLoaderTicketPool struct {
 	total       uint32
 	poolChannel chan struct{}
 	active      bool
 }
 
-func (mlp *myLoaderPool) Get() {
+func (mlp *myLoaderTicketPool) Get() {
 	<-mlp.poolChannel
 }
-func (mlp *myLoaderPool) Return() {
+func (mlp *myLoaderTicketPool) Return() {
 	mlp.poolChannel <- struct{}{}
 }
 
-func (mlp *myLoaderPool) Total() uint32 {
+func (mlp *myLoaderTicketPool) Total() uint32 {
 	return mlp.total
 }
 
-func (mlp *myLoaderPool) Remainder() uint32 {
+func (mlp *myLoaderTicketPool) Remainder() uint32 {
 	return uint32(len(mlp.poolChannel))
 }
 
-func (mlp *myLoaderPool) Active() bool {
+func (mlp *myLoaderTicketPool) Active() bool {
 	return mlp.active
 }
 
-func NewLoaderPool(total uint32) LoaderPool {
-	mlp := myLoaderPool{}
+func NewLoaderPool(total uint32) LoaderTicketPool {
+	mlp := myLoaderTicketPool{}
 	size := int(total)
 	ch := make(chan struct{}, total)
 	for i := 0; i < size; i++ {

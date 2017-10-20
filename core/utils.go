@@ -1,5 +1,6 @@
 package core
 
+// GetDetailInfo
 func GetDetailInfo(code ReturnCode) string {
 	var detail string
 	switch code {
@@ -15,6 +16,14 @@ func GetDetailInfo(code ReturnCode) string {
 		detail = "Query Refused"
 	case RET_SERVFAIL:
 		detail = "Server Fail"
+	case RET_CALL_ERROR:
+		detail = "Call Func Error"
+	case RET_RESULT_ERROR:
+		detail = "Result Error"
+	case RET_CODE_ID_ERROR:
+		detail = "ID Not Match"
+	case RET_SERVER_ERROR:
+		detail = "Server Error"
 	default:
 		detail = "Unknown"
 	}
