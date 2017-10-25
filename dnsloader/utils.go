@@ -1,16 +1,32 @@
 package dnsloader
 
 import (
+	"math/rand"
 	"strings"
+	"time"
 )
 
-// GetDNSTypeFromString return the true code of dns type
-func GetDNSTypeFromString(typeString string) int {
-	queryString := "dnsType" + strings.ToUpper(typeString)
+var letters = []byte("1234567890abcdefghijklmnopqrstuvwxyz")
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// GetDNSTypeCodeFromString return the true code of dns type
+func GetDNSTypeCodeFromString(typeString string) uint16 {
+	queryString := strings.ToUpper(typeString)
 	code, ok := DNSType[queryString]
 	if ok {
 		return code
-	} else {
-		return 0
 	}
+	return 0
+}
+
+//GenRandomDomain will generate the random domain name with the fix length
+func GenRandomDomain(length int, domain string) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b) + "." + domain
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestGetDNSTypeFromString(t *testing.T) {
+func TestGetDNSTypeCodeFromString(t *testing.T) {
 	var testCase = []struct {
 		input  string
 		expect int
@@ -26,7 +26,7 @@ func TestGetDNSTypeFromString(t *testing.T) {
 	},
 	}
 	for _, obj := range testCase {
-		output := GetDNSTypeFromString(obj.input)
+		output := GetDNSTypeCodeFromString(obj.input)
 		if output != obj.expect {
 			t.Errorf("Expect %d: Got %d", obj.expect, output)
 		}
