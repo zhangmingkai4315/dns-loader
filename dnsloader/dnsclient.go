@@ -1,7 +1,7 @@
 package dnsloader
 
 import (
-	"bytes"
+	// "bytes"
 	"github.com/zhangmingkai4315/dns-loader/core"
 	"github.com/zhangmingkai4315/go-dns-shooter/dns"
 	"log"
@@ -16,7 +16,7 @@ type DNSClient struct {
 	Port   int
 	packet *dns.DNSPacket
 	Config *Config
-	conn   *net.UDPConn
+	conn   net.Conn
 }
 
 // NewDefaultConfig func return the default configration object
@@ -54,13 +54,12 @@ func NewDNSClientWithConfig(addr string, port int, config *Config) (dnsclient *D
 	if port > 65535 || port < 0 {
 		port = 53
 	}
-
 	dnsclient = &DNSClient{Addr: addr, Port: port, Config: config}
-	udpAddr, err := net.ResolveUDPAddr("udp", addr+":"+strconv.Itoa(port))
+	// udpAddr, err := net.ResolveUDPAddr("udp", addr+":"+strconv.Itoa(port))
 	if err != nil {
 		return nil, err
 	}
-	conn, err := net.DialUDP("udp", nil, udpAddr)
+	conn, err := net.Dial("udp", addr+":"+strconv.Itoa(port))
 	if err != nil {
 		return nil, err
 	}
@@ -102,21 +101,21 @@ func (client *DNSClient) BuildReq() core.RawRequest {
 
 // Call func will be called by schedual each time
 func (client *DNSClient) Call(req []byte, timeout time.Duration) ([]byte, error) {
-
 	_, err := client.conn.Write(req)
 	if err != nil {
 		log.Printf("Send DNS Query Failed:%s", err)
 		return nil, err
 	}
 	readBytes := make([]byte, 512)
-	var buffer bytes.Buffer
-	_, err = client.conn.Read(readBytes)
-	if err != nil {
-		return nil, err
-	}
-	readByte := readBytes[0]
-	buffer.WriteByte(readByte)
-	return buffer.Bytes(), nil
+	// var buffer bytes.Buffer
+	// _, err = client.conn[randomConn].Read(readBytes)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// readByte := readBytes[0]
+	// buffer.WriteByte(readByte)
+	// return buffer.Bytes(), nil
+	return readBytes, nil
 }
 
 // CheckResp func

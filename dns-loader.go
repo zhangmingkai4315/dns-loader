@@ -4,11 +4,21 @@ import (
 	core "github.com/zhangmingkai4315/dns-loader/core"
 	loader "github.com/zhangmingkai4315/dns-loader/dnsloader"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"time"
 )
 
 func main() {
-	server := "8.8.8.8"
+	go func() {
+		log.Println("Start performace monitor on port 8080")
+		err := http.ListenAndServe("localhost:8080", http.DefaultServeMux)
+		if err != nil {
+			log.Println("Start performance monitor fail")
+		}
+	}()
+	// Start docker container first
+	server := "172.17.0.2"
 	port := 53
 	dnsclient, err := loader.NewDNSClientWithDefaultConfig(server, port)
 	if err != nil {
@@ -20,13 +30,13 @@ func main() {
 
 	param := core.GeneratorParam{
 		Caller:        dnsclient,
-		Timeout:       50 * time.Millisecond,
-		QPS:           uint32(1),
-		Duration:      100 * time.Second,
-		ResultChannel: make(chan *core.CallResult, 50),
+		Timeout:       1000 * time.Millisecond,
+		QPS:           uint32(100000),
+		Duration:      200 * time.Second,
+		ResultChannel: make(chan *core.CallResult, 2000),
 	}
 	log.Printf("Initialize load %+v", param)
-	gen, err := core.NewLoaderGenerator(param)
+	gen, err := loader.NewDNSLoaderGenerator(param)
 	if err != nil {
 		log.Panicf("Load generator initialization fail :%s", err)
 	}

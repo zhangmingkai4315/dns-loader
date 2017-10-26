@@ -1,51 +1,52 @@
-package core
+package dnsloader
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"github.com/briandowns/spinner"
+	"github.com/zhangmingkai4315/dns-loader/core"
 	"log"
 	"math"
 	"sync/atomic"
 	"time"
 )
 
-type myLoaderGenerator struct {
-	caller        Caller
+type myDNSLoaderGenerator struct {
+	caller        core.Caller
 	timeout       time.Duration
 	qps           uint32
 	status        uint32
 	duration      time.Duration
-	pool          LoaderTicketPool
+	pool          core.LoaderTicketPool
 	ctx           context.Context
 	cancelFunc    context.CancelFunc
 	callCount     int64
 	concurrency   uint32
-	resultChannel chan *CallResult
+	resultChannel chan *core.CallResult
 }
 
-func (mlg *myLoaderGenerator) init() {
+func (mlg *myDNSLoaderGenerator) init() {
 	log.Println("Initial common loader...")
 	var total = int64(mlg.timeout)/int64(1e9/mlg.qps) + 1
 	if total > math.MaxInt32 {
 		total = math.MaxInt32
 	}
 	mlg.concurrency = uint32(total)
-	pool := NewLoaderPool(mlg.concurrency)
+	pool := core.NewLoaderPool(mlg.concurrency * 10)
 	mlg.pool = pool
 	log.Printf("Initial Process Done QPS[%d]/concurrency[%d]", mlg.qps, mlg.concurrency)
 }
 
-func (mlg *myLoaderGenerator) Start() bool {
+func (mlg *myDNSLoaderGenerator) Start() bool {
 	log.Println("Starting Loader...")
 	mlg.ctx, mlg.cancelFunc = context.WithTimeout(context.Background(), mlg.duration)
 	mlg.callCount = 0
 	currentStatus := mlg.Status()
-	if currentStatus != STATUS_STARTING && currentStatus != STATUS_STOPPED {
+	if currentStatus != core.STATUS_STARTING && currentStatus != core.STATUS_STOPPED {
 		return false
 	}
-	atomic.StoreUint32(&mlg.status, STATUS_STARTING)
+	atomic.StoreUint32(&mlg.status, core.STATUS_STARTING)
 
 	var throttle <-chan time.Time
 	if mlg.qps > 0 {
@@ -54,7 +55,7 @@ func (mlg *myLoaderGenerator) Start() bool {
 		throttle = time.Tick(interval)
 	}
 
-	atomic.StoreUint32(&mlg.status, STATUS_STARTED)
+	atomic.StoreUint32(&mlg.status, core.STATUS_STARTED)
 	log.Println("Setting Done For Loader")
 
 	go func() {
@@ -85,23 +86,23 @@ func (mlg *myLoaderGenerator) Start() bool {
 	return true
 }
 
-func (mlg *myLoaderGenerator) prepareStop(err error) {
+func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
 	log.Printf("Prepare to Stop Load Test [%s]\n", err)
-	atomic.StoreUint32(&mlg.status, STATUS_STOPPING)
+	atomic.StoreUint32(&mlg.status, core.STATUS_STOPPING)
 	log.Println("Stop Channel...")
 	close(mlg.resultChannel)
-	atomic.StoreUint32(&mlg.status, STATUS_STOPPED)
+	atomic.StoreUint32(&mlg.status, core.STATUS_STOPPED)
 	log.Println("Stop Load Test Done!")
 }
 
-func (mlg *myLoaderGenerator) showIgnore(result *CallResult, err string) {
+func (mlg *myDNSLoaderGenerator) showIgnore(result *core.CallResult, err string) {
 	resultMsg := fmt.Sprintf(
 		"ID=%d, Code=%d, Msg=%s, Elapse=%v",
 		result.ID, result.Code, result.Msg, result.Elapse)
 	log.Printf("Ignored result: %s. (Error: %s)\n", resultMsg, err)
 }
 
-func (mlg *myLoaderGenerator) sendNewRequest() {
+func (mlg *myDNSLoaderGenerator) sendNewRequest() {
 	// Get resource from pool
 	mlg.pool.Get()
 	go func() {
@@ -115,9 +116,9 @@ func (mlg *myLoaderGenerator) sendNewRequest() {
 					errMessage = fmt.Sprintf("Call Panic[%s]", p)
 				}
 				log.Println(errMessage)
-				result := &CallResult{
+				result := &core.CallResult{
 					ID:   -1,
-					Code: RET_CALL_ERROR,
+					Code: core.RET_CALL_ERROR,
 					Msg:  errMessage,
 				}
 				mlg.collectResult(result)
@@ -129,28 +130,28 @@ func (mlg *myLoaderGenerator) sendNewRequest() {
 		rawRequest := mlg.caller.BuildReq()
 		var callStatus uint32
 		timer := time.AfterFunc(mlg.timeout, func() {
-			if !atomic.CompareAndSwapUint32(&callStatus, CALL_NOT_FINISH, CALL_TIMEOUT) {
+			if !atomic.CompareAndSwapUint32(&callStatus, core.CALL_NOT_FINISH, core.CALL_TIMEOUT) {
 				return
 			}
-			result := &CallResult{
+			result := &core.CallResult{
 				ID:     rawRequest.ID,
 				Req:    rawRequest,
-				Code:   RET_TIMEOUT,
+				Code:   core.RET_TIMEOUT,
 				Elapse: mlg.timeout,
 			}
 			mlg.collectResult(result)
 		})
 		rawResponse := mlg.CallFunc(&rawRequest)
-		if !atomic.CompareAndSwapUint32(&callStatus, CALL_NOT_FINISH, CALL_SUCCESS_DONE) {
+		if !atomic.CompareAndSwapUint32(&callStatus, core.CALL_NOT_FINISH, core.CALL_SUCCESS_DONE) {
 			return
 		}
 		timer.Stop()
-		var result *CallResult
+		var result *core.CallResult
 		if rawResponse.Err != nil {
-			result = &CallResult{
+			result = &core.CallResult{
 				ID:     rawResponse.ID,
 				Req:    rawRequest,
-				Code:   RET_CALL_ERROR,
+				Code:   core.RET_CALL_ERROR,
 				Msg:    rawResponse.Err.Error(),
 				Elapse: rawResponse.Elapse,
 			}
@@ -162,25 +163,25 @@ func (mlg *myLoaderGenerator) sendNewRequest() {
 	}()
 }
 
-func (mlg *myLoaderGenerator) CallFunc(rawReq *RawRequest) *RawResponse {
+func (mlg *myDNSLoaderGenerator) CallFunc(rawReq *core.RawRequest) *core.RawResponse {
 	atomic.AddInt64(&mlg.callCount, 1)
 	if rawReq == nil {
-		return &RawResponse{ID: -1, Err: errors.New("Invalid Request Raw Data")}
+		return &core.RawResponse{ID: -1, Err: errors.New("Invalid Request Raw Data")}
 	}
 	start := time.Now().UnixNano()
 	resp, err := mlg.caller.Call(rawReq.Req, mlg.timeout)
 	end := time.Now().UnixNano()
 
 	elapsedTime := time.Duration(end - start)
-	var rawResponse RawResponse
+	var rawResponse core.RawResponse
 	if err != nil {
-		rawResponse = RawResponse{
+		rawResponse = core.RawResponse{
 			ID:     rawReq.ID,
 			Err:    errors.New(err.Error()),
 			Elapse: elapsedTime,
 		}
 	} else {
-		rawResponse = RawResponse{
+		rawResponse = core.RawResponse{
 			ID:     rawReq.ID,
 			Resp:   resp,
 			Elapse: elapsedTime,
@@ -189,13 +190,13 @@ func (mlg *myLoaderGenerator) CallFunc(rawReq *RawRequest) *RawResponse {
 	return &rawResponse
 }
 
-func (mlg *myLoaderGenerator) collectResult(result *CallResult) bool {
+func (mlg *myDNSLoaderGenerator) collectResult(result *core.CallResult) bool {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Maybe channel already shutdown for receive data", r.(error).Error())
 		}
 	}()
-	if atomic.LoadUint32(&mlg.status) != STATUS_STARTED {
+	if atomic.LoadUint32(&mlg.status) != core.STATUS_STARTED {
 		mlg.showIgnore(result, "Stopped Loader Test")
 		return false
 	}
@@ -203,41 +204,43 @@ func (mlg *myLoaderGenerator) collectResult(result *CallResult) bool {
 	case mlg.resultChannel <- result:
 		return true
 	default:
-		mlg.showIgnore(result, "Full Result Channel")
+		// mlg.showIgnore(result, "Full Result Channel")
 		return false
 	}
 }
 
-func (mlg *myLoaderGenerator) generatorLoad(throttle <-chan time.Time, spinnerChannel chan<- struct{}) {
+func (mlg *myDNSLoaderGenerator) generatorLoad(throttle <-chan time.Time, spinnerChannel chan<- struct{}) {
 	for {
-		// select {
-		// case <-mlg.ctx.Done():
-		// 	spinnerChannel <- struct{}{}
-		// 	mlg.prepareStop(mlg.ctx.Err())
-		// 	return
-		// default:
-		// }
+		select {
+		case <-mlg.ctx.Done():
+			spinnerChannel <- struct{}{}
+			mlg.prepareStop(mlg.ctx.Err())
+			return
+		default:
+		}
+		// rawRequest := mlg.caller.BuildReq()
+		// mlg.CallFunc(&rawRequest)
 		mlg.sendNewRequest()
-		// select {
-		// // Only get value from throttle , do nothing till next for loop
-		// case <-throttle:
-		// case <-mlg.ctx.Done():
-		// 	spinnerChannel <- struct{}{}
-		// 	mlg.prepareStop(mlg.ctx.Err())
-		// 	return
-		// }
+		select {
+		// Only get value from throttle , do nothing till next for loop
+		case <-throttle:
+		case <-mlg.ctx.Done():
+			spinnerChannel <- struct{}{}
+			mlg.prepareStop(mlg.ctx.Err())
+			return
+		}
 
 	}
 }
 
-func (mlg *myLoaderGenerator) Stop() bool {
+func (mlg *myDNSLoaderGenerator) Stop() bool {
 	if !atomic.CompareAndSwapUint32(
-		&mlg.status, STATUS_STARTED, STATUS_STOPPING) {
+		&mlg.status, core.STATUS_STARTED, core.STATUS_STOPPING) {
 		return false
 	}
 	mlg.cancelFunc()
 	for {
-		if atomic.LoadUint32(&mlg.status) == STATUS_STOPPED {
+		if atomic.LoadUint32(&mlg.status) == core.STATUS_STOPPED {
 			break
 		}
 		time.Sleep(time.Microsecond)
@@ -245,26 +248,26 @@ func (mlg *myLoaderGenerator) Stop() bool {
 	return true
 }
 
-func (mlg *myLoaderGenerator) Status() uint32 {
+func (mlg *myDNSLoaderGenerator) Status() uint32 {
 	return atomic.LoadUint32(&mlg.status)
 }
-func (mlg *myLoaderGenerator) CallCount() int64 {
+func (mlg *myDNSLoaderGenerator) CallCount() int64 {
 	return atomic.LoadInt64(&mlg.callCount)
 }
 
-// NewLoaderGenerator will return a new instance of generator
+// NewDNSLoaderGenerator will return a new instance of generator
 // using param from GeneratorParam
-func NewLoaderGenerator(param GeneratorParam) (Generator, error) {
+func NewDNSLoaderGenerator(param core.GeneratorParam) (core.Generator, error) {
 	log.Println("New Load Generator")
 	if err := param.ValidCheck(); err != nil {
 		return nil, err
 	}
-	mlg := &myLoaderGenerator{
+	mlg := &myDNSLoaderGenerator{
 		caller:        param.Caller,
 		timeout:       param.Timeout,
 		qps:           param.QPS,
 		duration:      param.Duration,
-		status:        STATUS_ORIGINAL,
+		status:        core.STATUS_ORIGINAL,
 		resultChannel: param.ResultChannel,
 	}
 	mlg.init()
