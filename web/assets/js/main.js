@@ -6,7 +6,7 @@
 function getFormData($form) {
     var formArray = $form.serializeArray()
     var result = {}
-    $.map(formArray, function(n, i) {
+    $.map(formArray, function (n, i) {
         result[n["name"]] = n["value"]
     })
     return result
@@ -56,33 +56,34 @@ function validateConfig(result) {
     return true
 }
 
-$(document).ready(function() {
-    $(".btn-fixed-select").on("click", function() {
+$(document).ready(function () {
+    $(".btn-fixed-select").on("click", function () {
         $(".btn-fixed-select").removeClass("active")
         $(this).addClass("active")
     });
 
-    $(".config-submit").click(function() {
+    $(".config-submit").click(function () {
         // serial data
         var result = getFormData($('form[name="config"]'))
         var fixedType = $(".btn-fixed-select.active").attr("data-value") === "true" ? true : false
-            // validate data
-            // sende data
+        // validate data
+        // sende data
         result['query_type_fixed'] = fixedType
         if (validateConfig(result) === false) {
             return
         }
+        $('.master-running').removeClass("hide")
         $.ajax({
             type: "POST",
             url: "/start",
             data: JSON.stringify(result),
-            success: function(data) {
+            success: function (data) {
                 console.log(data)
             },
             contentType: "application/json"
         })
     })
-    $(".small-delete-button").click(function() {
+    $(".small-delete-button").click(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
@@ -92,11 +93,11 @@ $(document).ready(function() {
             type: "DELETE",
             url: "/nodes",
             data: JSON.stringify(data),
-            success: function(data) {
+            success: function (data) {
                 toastr.info("delete success")
                 window.location.reload()
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Delete fail", err.responseJSON.message)
                 } else {
@@ -107,7 +108,7 @@ $(document).ready(function() {
         })
     })
 
-    $(".small-ping-button").click(function() {
+    $(".small-ping-button").click(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
@@ -117,15 +118,15 @@ $(document).ready(function() {
             type: "POST",
             url: "/ping",
             data: JSON.stringify(data),
-            success: function(data) {
+            success: function (data) {
                 toastr.success("ping success")
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("ping fail", err.responseJSON.message)
                 } else {
                     toastr.error("ping fail")
-                        // change the color of status to black
+                    // change the color of status to black
                 }
             },
             contentType: "application/json"
@@ -133,15 +134,17 @@ $(document).ready(function() {
     })
 
 
-    $('.config-kill').click(function() {
+    $('.config-kill').click(function () {
         console.log("stop signal send to master server")
         $.ajax({
             type: "GET",
             url: "/stop",
-            success: function(response) {
+            success: function (response) {
+                console.log(response)
+                $('.master-running').addClass("hide")
                 toastr.success("stop traffic success")
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Error", err.responseJSON.message)
                 } else {
@@ -152,7 +155,7 @@ $(document).ready(function() {
         })
     })
 
-    $('.new-agent').click(function() {
+    $('.new-agent').click(function () {
         var data = getFormData($("form[name='new-agent']"))
         if (typeof data.ipaddress === 'undefined' || data.ipaddress === "") {
             toastr.error('IP address does not exist', 'IP Error')
@@ -168,13 +171,13 @@ $(document).ready(function() {
             type: "POST",
             url: "/nodes",
             data: JSON.stringify(data),
-            success: function(response) {
+            success: function (response) {
                 $(".add-node-loading").addClass("hide")
-                    // console.log(data)
-                    //     // Add to list 
+                // console.log(data)
+                //     // Add to list 
                 window.location.reload()
             },
-            error: function(err) {
+            error: function (err) {
                 $(".add-node-loading").addClass("hide")
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Add new node fail", err.responseJSON.message)

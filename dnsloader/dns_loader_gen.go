@@ -2,9 +2,10 @@ package dnsloader
 
 import (
 	"context"
-	"log"
 	"sync/atomic"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/briandowns/spinner"
 	"go.uber.org/ratelimit"

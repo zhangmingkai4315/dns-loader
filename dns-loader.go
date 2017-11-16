@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/zhangmingkai4315/dns-loader/dnsloader"
 	"github.com/zhangmingkai4315/dns-loader/web"
@@ -43,6 +44,34 @@ Options:
   -debug   enable debug mode
 
 `
+
+type MyHook struct{}
+
+var fmter = new(log.TextFormatter)
+
+func (h *MyHook) Levels() []log.Level {
+	return []log.Level{
+		log.InfoLevel,
+		log.WarnLevel,
+		log.ErrorLevel,
+		log.FatalLevel,
+		log.PanicLevel,
+	}
+}
+
+func (h *MyHook) Fire(entry *log.Entry) (err error) {
+	line, err := fmter.Format(entry)
+	if err == nil {
+		fmt.Fprintf(os.Stderr, string(line))
+	}
+	return
+}
+
+func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(web.MessagesHub)
+	log.AddHook(&MyHook{})
+}
 
 func main() {
 	flag.Usage = func() {
