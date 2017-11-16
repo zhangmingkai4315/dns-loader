@@ -192,10 +192,6 @@ body {
     overflow: hidden !important;
 }
 
-.navbar .navbar-collapse .navbar-right>li:last-child {
-    padding-left: 22px;
-}
-
 
 /* Common */
 
