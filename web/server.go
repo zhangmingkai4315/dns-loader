@@ -3,9 +3,10 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -128,6 +129,25 @@ func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
+func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
+	r := render.New(render.Options{})
+	if MessagesHub.Len() > 0 {
+		if data, err := MessagesHub.Get(); err != nil {
+			r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
+		} else {
+			var messages []Message
+			err := json.Unmarshal(data, &messages)
+			if err != nil {
+				r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
+				return
+			}
+			r.JSON(w, http.StatusNotFound, map[string][]Message{"data": messages})
+		}
+		return
+	}
+	r.JSON(w, http.StatusNotFound, map[string]string{"status": "error"})
+}
+
 func login(config *dnsloader.Configuration) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		session, _ := store.Get(req, "dns-loader")
@@ -175,6 +195,7 @@ func NewServer(config *dnsloader.Configuration) {
 	r.HandleFunc("/ping", auth(pingNode)).Methods("POST")
 	r.HandleFunc("/start", auth(startDNSTraffic)).Methods("POST")
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
+	r.HandleFunc("/status", (getCurrentStatus)).Methods("GET")
 	log.Println("http server route init success")
 	log.Printf("static file folder:%s\n", http.Dir("/web/assets"))
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))

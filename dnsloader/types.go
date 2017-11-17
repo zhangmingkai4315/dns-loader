@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Config define the basic configuration for dns loader

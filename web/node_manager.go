@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/rpc"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/zhangmingkai4315/dns-loader/dnsloader"
 

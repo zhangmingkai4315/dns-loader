@@ -2,9 +2,11 @@ package dnsloader
 
 import (
 	// "bytes"
-	"log"
 	"net"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/zhangmingkai4315/go-dns-shooter/dns"
 
 	"github.com/zhangmingkai4315/go-dns-shooter/dns"
 )
