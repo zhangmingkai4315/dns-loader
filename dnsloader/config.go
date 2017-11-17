@@ -47,6 +47,8 @@ func (config *Configuration) Valid() error {
 	if err != nil {
 		return err
 	}
+	// 将所有大小写的输入都统一转化为大写
+	config.QueryType = strings.ToUpper(config.QueryType)
 	if config.QPS < 0 ||
 		config.Duration < 0 ||
 		config.DomainRandomLength < 0 ||

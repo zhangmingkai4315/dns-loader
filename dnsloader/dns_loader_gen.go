@@ -26,18 +26,12 @@ type myDNSLoaderGenerator struct {
 	result     map[uint8]uint64
 }
 
-func (mlg *myDNSLoaderGenerator) init() {
-	log.Println("initial common loader...")
-	mlg.result = make(map[uint8]uint64)
-	log.Printf("initial Process Done QPS[%d]", mlg.qps)
-}
-
 func (mlg *myDNSLoaderGenerator) Start() bool {
 	log.Println("starting Loader...")
 	mlg.ctx, mlg.cancelFunc = context.WithTimeout(context.Background(), mlg.duration)
 	mlg.callCount = 0
 	currentStatus := mlg.Status()
-	if currentStatus != STATUS_STARTING && currentStatus != STATUS_STOPPED {
+	if currentStatus != STATUS_STOPPED {
 		return false
 	}
 	atomic.StoreUint32(&mlg.status, STATUS_STARTING)
@@ -45,7 +39,7 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 		interval := time.Duration(1e9 / mlg.qps)
 		log.Printf("setting throttle %v", interval)
 	}
-	atomic.StoreUint32(&mlg.status, STATUS_STARTED)
+	atomic.StoreUint32(&mlg.status, STATUS_RUNNING)
 
 	log.Println("new goroutine to generating dns packets")
 	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
@@ -137,7 +131,7 @@ func (mlg *myDNSLoaderGenerator) generatorLoad(limiter ratelimit.Limiter, spinne
 
 func (mlg *myDNSLoaderGenerator) Stop() bool {
 	if !atomic.CompareAndSwapUint32(
-		&mlg.status, STATUS_STARTED, STATUS_STOPPING) {
+		&mlg.status, STATUS_RUNNING, STATUS_STOPPING) {
 		return false
 	}
 	mlg.cancelFunc()
@@ -169,9 +163,10 @@ func NewDNSLoaderGenerator(param GeneratorParam) (Generator, error) {
 		timeout:  param.Timeout,
 		qps:      param.QPS,
 		duration: param.Duration,
-		status:   STATUS_ORIGINAL,
+		status:   STATUS_STOPPED,
 	}
-	mlg.init()
+	mlg.result = make(map[uint8]uint64)
+	log.Printf("initial Process Done QPS[%d]", mlg.qps)
 	return mlg, nil
 }
 

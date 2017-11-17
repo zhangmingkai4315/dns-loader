@@ -2,10 +2,11 @@ package dnsloader
 
 import (
 	// "bytes"
-	"github.com/zhangmingkai4315/go-dns-shooter/dns"
 	"log"
 	"net"
 	"strconv"
+
+	"github.com/zhangmingkai4315/go-dns-shooter/dns"
 )
 
 // DNSClient 定义dnsloader发包的配置数据
@@ -15,7 +16,7 @@ type DNSClient struct {
 	Conn   net.Conn
 }
 
-// NewDNSClientWithConfig 使用传递的配置发包参数进行初始化
+// NewDNSClientWithConfig 使用传递的配置参数进行初始化
 func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err error) {
 	dnsclient = &DNSClient{Config: config}
 	conn, err := net.Dial("udp", config.Server+":"+strconv.Itoa(config.Port))

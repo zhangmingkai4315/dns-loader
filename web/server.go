@@ -116,8 +116,12 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 
 func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
+	if dnsloader.GloablGenerator == nil || dnsloader.GloablGenerator.Status() != dnsloader.STATUS_RUNNING {
+		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "Not Running"})
+		return
+	}
 	if stopStatus := dnsloader.GloablGenerator.Stop(); true != stopStatus {
-		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "ServerFail"})
+		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "Server Fail"})
 		return
 	}
 	go nodeManager.Call(Kill, nil)
