@@ -80,7 +80,7 @@ func main() {
 	flag.Parse()
 	//if config file exist, load config file
 	var config *dnsloader.Configuration
-	config = &dnsloader.Configuration{}
+	config = dnsloader.GetGlobalConfig()
 	// enable performance debug for app
 	if *debug == true {
 		go func() {
@@ -122,7 +122,7 @@ func main() {
 	}
 	if *loaderType == "master" {
 		log.Printf("start web for control panel default web address:%s", config.HTTPServer)
-		web.NewServer(config)
+		web.NewServer()
 		return
 	}
 	if *loaderType == "agent" {

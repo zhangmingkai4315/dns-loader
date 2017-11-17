@@ -13,17 +13,16 @@ type Message struct {
 	Result bool   `json:"result"`
 }
 type GlobalMessages struct {
-	locker sync.RWMutex
-	Events []Message `json:"events"`
+	locker  sync.RWMutex
+	MaxSize int
+	Events  []Message `json:"events"`
 }
 
 var MessagesHub *GlobalMessages
 
 func init() {
-	events := make([]Message, 0)
-	MessagesHub = &GlobalMessages{
-		Events: events,
-	}
+	// events := make([]Message, 0)
+	MessagesHub = NewGloabalMessages(50)
 }
 
 func (g *GlobalMessages) Len() int {
@@ -55,4 +54,12 @@ func (g *GlobalMessages) Get() ([]byte, error) {
 	}
 	g.Events = nil
 	return result, nil
+}
+
+func NewGloabalMessages(max int) *GlobalMessages {
+	events := make([]Message, 0)
+	return &GlobalMessages{
+		MaxSize: 100,
+		Events:  events,
+	}
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/nu7hatch/gouuid"
 
 	"github.com/asaskevich/govalidator"
@@ -17,24 +19,41 @@ func init() {
 
 // Configuration define all config for this app
 type Configuration struct {
-	ID                 string `json:"id" valid:"uuid"`
-	LoaderType         string `json:"loader_type" valid:"in(once|master|agent),optional"`
-	ControlMaster      string `json:"control_master" valid:"ip,optional"`
-	Duration           int    `json:"duration" valid:"-"`
-	QPS                int    `json:"qps" valid:"-"`
-	Server             string `json:"server" valid:"ip"`
-	Port               int    `json:"port" valid:"-"`
-	Domain             string `json:"domain" valid:"dns"`
-	DomainRandomLength int    `json:"domain_random_length" valid:"-"`
-	QueryTypeFixed     bool   `json:"query_type_fixed" valid:"-"`
-	QueryType          string `json:"query_type" valid:"-"`
-	Debug              bool   `json:"debug" valid:"-"`
-	HTTPServer         string `json:"web" valid:"ip,optional"`
-	AgentPort          int    `json:"agent_port" valid:"-"`
+	ID                 string   `json:"id" valid:"uuid"`
+	LoaderType         string   `json:"loader_type" valid:"in(once|master|agent),optional"`
+	ControlMaster      string   `json:"control_master" valid:"ip,optional"`
+	Duration           int      `json:"duration" valid:"-"`
+	QPS                int      `json:"qps" valid:"-"`
+	Server             string   `json:"server" valid:"ip"`
+	Port               int      `json:"port" valid:"-"`
+	Domain             string   `json:"domain" valid:"dns"`
+	DomainRandomLength int      `json:"domain_random_length" valid:"-"`
+	QueryTypeFixed     bool     `json:"query_type_fixed" valid:"-"`
+	QueryType          string   `json:"query_type" valid:"-"`
+	Debug              bool     `json:"debug" valid:"-"`
+	HTTPServer         string   `json:"web" valid:"ip,optional"`
+	AgentPort          int      `json:"agent_port" valid:"-"`
+	Agents             []string `json:"agents"  valid:"-"`
+	User               string   `json:"-" valid:"-"`
+	Password           string   `json:"-" valid:"-"`
+	AppSecrect         string   `json:"-" valid:"-"`
+}
 
-	User       string `json:"-" valid:"-"`
-	Password   string `json:"-" valid:"-"`
-	AppSecrect string `json:"-" valid:"-"`
+var globalConfig *Configuration
+var globalConfigFileHandler *ini.File
+var configFileName string
+
+func GetGlobalConfig() *Configuration {
+	if globalConfig == nil {
+		globalConfig = &Configuration{}
+	}
+	return globalConfig
+}
+func GetGlobalConfigFileHandler() (*ini.File, error) {
+	if globalConfigFileHandler == nil {
+		return nil, errors.New("nil pointer for handler")
+	}
+	return globalConfigFileHandler, nil
 }
 
 // Valid will check all setting
@@ -66,9 +85,12 @@ func (config *Configuration) LoadConfigurationFromIniFile(filename string) (err 
 		return errors.New("Configuration file must be .ini file type")
 	}
 	cfg, err := ini.Load(filename)
+
 	if err != nil {
 		return fmt.Errorf("Configuration file load error:%s", err.Error())
 	}
+	globalConfigFileHandler = cfg
+	configFileName = filename
 	secApp, err := cfg.GetSection("App")
 	if err != nil {
 		return fmt.Errorf("Configuration file load section [App] error:%s", err.Error())
@@ -130,6 +152,40 @@ func (config *Configuration) LoadConfigurationFromIniFile(filename string) (err 
 	if secQuery.HasKey("query_type") {
 		config.QueryType = secQuery.Key("query_type").String()
 	}
-
+	if secQuery.HasKey("agent_list") {
+		config.Agents = secQuery.Key("agent_list").Strings(",")
+	}
 	return
+}
+
+func (config *Configuration) AddAgent(ip string) error {
+	if StringInSlice(ip, config.Agents) {
+		return errors.New("already in config")
+	}
+	config.Agents = append(config.Agents, ip)
+	// save to file
+	if globalConfigFileHandler == nil {
+		return errors.New("not ready for hand config file")
+	}
+	agentList := strings.Join(config.Agents, ",")
+	globalConfigFileHandler.Section("Query").Key("agent_list").SetValue(agentList)
+	globalConfigFileHandler.SaveTo(configFileName)
+	return nil
+}
+
+func (config *Configuration) RemoveAgent(ip string) error {
+	if !StringInSlice(ip, config.Agents) {
+		return errors.New("agent not in config")
+	}
+	log.Printf("trying to remove agent %s", ip)
+	config.Agents = RemoveStringInSlice(ip, config.Agents)
+	// save to file
+	if globalConfigFileHandler == nil {
+		return errors.New("not ready for hand config file")
+	}
+	agentList := strings.Join(config.Agents, ",")
+	log.Println(config.Agents)
+	globalConfigFileHandler.Section("Query").Key("agent_list").SetValue(agentList)
+	globalConfigFileHandler.SaveTo(configFileName)
+	return nil
 }

@@ -22,6 +22,17 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
+// RemoveStringInSlice find if string type object and remove it
+func RemoveStringInSlice(a string, list []string) []string {
+	for i, b := range list {
+		if b == a {
+			list = append(list[:i], list[i+1:]...)
+			break
+		}
+	}
+	return list
+}
+
 // GetDetailInfo
 func GetDetailInfo(code ReturnCode) string {
 	var detail string

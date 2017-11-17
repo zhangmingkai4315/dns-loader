@@ -45,7 +45,7 @@ type NodeManager struct {
 func NewNodeManager(c *dnsloader.Configuration) *NodeManager {
 	ipstatus := make(map[string][]NodeStatus)
 	return &NodeManager{
-		IPList:     []string{},
+		IPList:     c.Agents,
 		TaskStatus: []string{},
 		IPStatus:   ipstatus,
 		config:     c,
@@ -66,6 +66,11 @@ func (manager *NodeManager) AddNode(ip string, port int) error {
 	log.Println("ping agent success")
 	if !dnsloader.StringInSlice(ip, manager.IPList) {
 		manager.IPList = append(manager.IPList, ip)
+		config := dnsloader.GetGlobalConfig()
+		if err != nil {
+			return err
+		}
+		return config.AddAgent(ip)
 	} else {
 		return errors.New("Already in list")
 	}
@@ -85,19 +90,13 @@ func (manager *NodeManager) AddStatus(ip string, status Event, message string) e
 
 // Remove will remove the ip from current list
 func (manager *NodeManager) Remove(deleteip string) (err error) {
-	found := false
-	for i, ip := range manager.IPList {
-		if ip == deleteip {
-			manager.IPList = append(manager.IPList[:i], manager.IPList[i+1:]...)
-			found = true
-			break
-		}
-	}
+	manager.IPList = dnsloader.RemoveStringInSlice(deleteip, manager.IPList)
 	delete(manager.IPStatus, deleteip)
-	if found == false {
-		return errors.New("ip address not in the list")
+	config := dnsloader.GetGlobalConfig()
+	if err != nil {
+		return err
 	}
-	return
+	return config.RemoveAgent(deleteip)
 }
 
 // Call function will send data to all node

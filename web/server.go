@@ -34,6 +34,7 @@ func auth(f func(w http.ResponseWriter, req *http.Request)) func(w http.Response
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
+
 	data := map[string]interface{}{
 		"iplist": nodeManager.IPList,
 	}
@@ -182,7 +183,8 @@ func logout(w http.ResponseWriter, req *http.Request) {
 }
 
 // NewServer function create the http api
-func NewServer(config *dnsloader.Configuration) {
+func NewServer() {
+	config := dnsloader.GetGlobalConfig()
 	key := []byte(config.AppSecrect)
 	nodeManager = NewNodeManager(config)
 	store = sessions.NewCookieStore(key)

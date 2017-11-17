@@ -110,7 +110,7 @@
                         <!-- /.modal -->
                         <button type="button" class="btn btn-submit config-submit"><i class="fa fa-play-circle" aria-hidden="true"></i> Start</button>
                         <button type="button" class="btn btn-submit config-kill"><i class="fa fa-stop-circle" aria-hidden="true"></i> Stop</button>
-                        <button type="button" class="btn btn-submit show-console right" data-toggle="modal" data-target="#myConsoleModal"><i class="fa fa-window-maximize" aria-hidden="true"></i> Console</button>
+                        <button type="button" class="btn btn-submit show-console right" data-toggle="modal" data-target="#myConsoleModal"><i class="fa fa-window-restore" aria-hidden="true"></i> Console</button>
                     </form>
                 </div>
                 <div class="info-status master-status">
@@ -186,7 +186,7 @@
                         <tbody class="agent-list">
                             {{with .iplist}} {{ range $key,$value := .}}
                             <tr>
-                                <td>{{$value}}</td>
+                                <td><i class="fa fa-hdd-o" aria-hidden="true"></i> {{$value}}</td>
                                 <td>
                                     <i class="fa fa-2x fa-check-circle-o" style="font-size: 1.5em;color:#1ff300;" aria-hidden="true"></i>
                                 </td>
