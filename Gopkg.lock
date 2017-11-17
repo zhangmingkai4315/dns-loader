@@ -56,6 +56,12 @@
   revision = "a422bbe96644373c5753384a59d678f7d261ff10"
 
 [[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "418b41d23a1bf978c06faea5313ba194650ac088"
+  version = "v0.8.7"
+
+[[projects]]
   branch = "master"
   name = "github.com/unrolled/render"
   packages = ["."]
@@ -82,6 +88,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff55abc8a4fc762446682580c794fef9ecf0f6272c8ffdf7527766cea47c9144"
+  inputs-digest = "a078088c298903cbfbf2360e50b0fde7b7cd47fe26fe9af6c6abfd130fe009e0"
   solver-name = "gps-cdcl"
   solver-version = 1

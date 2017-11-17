@@ -3,14 +3,14 @@ package web
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"sync"
 )
 
 type Message struct {
-	Level string `json:"level"`
-	Time  string `json:"time"`
-	Msg   string `json:"msg"`
+	Level  string `json:"level"`
+	Time   string `json:"time"`
+	Msg    string `json:"msg"`
+	Result bool   `json:"result"`
 }
 type GlobalMessages struct {
 	locker sync.RWMutex
@@ -42,7 +42,6 @@ func (g *GlobalMessages) Write(p []byte) (n int, err error) {
 	if event.Msg == "" {
 		return 0, errors.New("Empty Messages")
 	}
-	log.Println(event)
 	g.Events = append(g.Events, event)
 	return len(p), nil
 }

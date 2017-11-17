@@ -141,11 +141,11 @@ func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 				r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
 				return
 			}
-			r.JSON(w, http.StatusNotFound, map[string][]Message{"data": messages})
+			r.JSON(w, http.StatusOK, map[string][]Message{"data": messages})
 		}
 		return
 	}
-	r.JSON(w, http.StatusNotFound, map[string]string{"status": "error"})
+	r.JSON(w, http.StatusOK, map[string]string{"status": "no update"})
 }
 
 func login(config *dnsloader.Configuration) func(w http.ResponseWriter, req *http.Request) {
@@ -197,7 +197,7 @@ func NewServer(config *dnsloader.Configuration) {
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
 	r.HandleFunc("/status", (getCurrentStatus)).Methods("GET")
 	log.Println("http server route init success")
-	log.Printf("static file folder:%s\n", http.Dir("/web/assets"))
+	log.Printf("static file folder:%s", http.Dir("/web/assets"))
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))
 	http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
 }

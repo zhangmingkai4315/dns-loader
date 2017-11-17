@@ -115,13 +115,13 @@ func main() {
 		dnsloader.GenTrafficFromConfig(config)
 		return
 	}
-	log.Printf("load configuration from file:%s\n", *configFile)
+	log.Printf("load configuration from file:%s", *configFile)
 	err := config.LoadConfigurationFromIniFile(*configFile)
 	if err != nil {
 		log.Panicf("read configuration file error:%s", err.Error())
 	}
 	if *loaderType == "master" {
-		log.Printf("start Web for control panel default web address:%s\n", config.HTTPServer)
+		log.Printf("start web for control panel default web address:%s", config.HTTPServer)
 		web.NewServer(config)
 		return
 	}
@@ -129,7 +129,7 @@ func main() {
 		if config.AgentPort == 0 || config.ControlMaster == "" {
 			usageAndExit("agent port and master ip must given")
 		}
-		log.Printf("start agent server listen on %d for master:%s connect\n", config.AgentPort, config.ControlMaster)
+		log.Printf("start agent server listen on %d for master:%s connect", config.AgentPort, config.ControlMaster)
 		web.NewAgentServer(config)
 		return
 	}

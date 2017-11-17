@@ -66,20 +66,20 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 	mlg.generatorLoad(limiter, s)
 	log.Println("waiting for program shutdown....")
 	time.Sleep(5)
-	log.Printf("[Result]total packets sum:%d", mlg.CallCount())
-	log.Printf("[Result]runing time %v", mlg.duration)
+	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", mlg.CallCount())
+	log.WithFields(log.Fields{"result": true}).Infof("runing time %v", mlg.duration)
 	var counter uint64
 	for k, v := range mlg.result {
 		counter = v + counter
-		log.Printf("[Result]status %s:%d [%.2f%%]", DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
+		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f%%]", DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
 	}
 	restUnknown := mlg.CallCount() - counter
-	log.Printf("[Result]status unknown:%d [%.2f%%]", restUnknown, float64(restUnknown*100)/float64(mlg.CallCount()))
+	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f%%]", restUnknown, float64(restUnknown*100)/float64(mlg.CallCount()))
 	return true
 }
 
 func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
-	log.Printf("prepare to stop load test [%s]\n", err)
+	log.Printf("prepare to stop load test [%s]", err)
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPING)
 	log.Println("try to stop channel...")
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPED)
@@ -179,7 +179,7 @@ func GenTrafficFromConfig(config *Configuration) {
 		log.Panicf("%s", err.Error())
 	}
 	log.Println("config the dns loader success")
-	log.Printf("current configuration for dns loader is server:%s|port:%d\n",
+	log.Printf("current configuration for dns loader is server:%s|port:%d",
 		dnsclient.Config.Server, dnsclient.Config.Port)
 	// log.Printf("%+v", config)
 	param := GeneratorParam{

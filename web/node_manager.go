@@ -58,7 +58,7 @@ func (manager *NodeManager) AddNode(ip string, port int) error {
 		port = manager.config.AgentPort
 	}
 	ip = fmt.Sprintf("%s:%d", ip, port)
-	log.Printf("send ping request to node:%s\n", ip)
+	log.Printf("send ping request to node:%s", ip)
 	err := manager.callPing(ip)
 	if err != nil {
 		return err
@@ -107,12 +107,16 @@ func (manager *NodeManager) Call(event Event, data interface{}) error {
 		go func(ip string, event Event, data interface{}) {
 			switch event {
 			case Start:
+				log.Printf("send configuration to agent :%s", ip)
 				manager.callStart(ip, data)
 			case Check:
+				log.Printf("send check signal to agent :%s", ip)
 				manager.callCheckStatus(ip, event, data)
 			case Kill:
+				log.Printf("send kill signal to agent :%s", ip)
 				manager.callKill(ip)
 			case Ping:
+				log.Printf("send ping signal to agent :%s", ip)
 				manager.callPing(ip)
 			}
 		}(ip, event, data)
