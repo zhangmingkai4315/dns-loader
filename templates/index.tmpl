@@ -1,106 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.css" />
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="/public/css/style.css">
-    <title>DNS-Loader</title>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.css" />
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+            crossorigin="anonymous">
+        <link rel="stylesheet" href="/public/css/style.css">
+        <title>DNS-Loader</title>
+    </head>
 
-<body>
-    <div class="container-fluid header">
-        <nav class="navbar navbar-default">
-            <div class="container">
-                <!-- Brand and toggle get grouped for better mobile display -->
-                <div class="navbar-header">
-                    <a class="navbar-brand" href="/">
-                        <img style="height:30px" src="/public/logo.png" />
-                    </a>
-                </div>
-                <!-- Collect the nav links, forms, and other content for toggling -->
-                <div class="collapse navbar-collapse" id="navbar-collapse-2">
-                    <ul class="nav navbar-nav navbar-right">
-                        <!-- <li>
+    <body>
+        <div class="container-fluid header">
+            <nav class="navbar navbar-default">
+                <div class="container">
+                    <!-- Brand and toggle get grouped for better mobile display -->
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="/">
+                            <img style="height:30px" src="/public/logo.png" />
+                        </a>
+                    </div>
+                    <!-- Collect the nav links, forms, and other content for toggling -->
+                    <div class="collapse navbar-collapse" id="navbar-collapse-2">
+                        <ul class="nav navbar-nav navbar-right">
+                            <!-- <li>
                                 <a href="#">Usage</a>
                             </li> -->
-                        <li>
-                            <a href="https://github.com/zhangmingkai4315/dns-loader">
-                                <i class="fa fa-github" aria-hidden="true"></i> Github</a>
-                        </li>
-                        <li>
+                            <li>
+                                <a href="https://github.com/zhangmingkai4315/dns-loader">
+                                    <i class="fa fa-github" aria-hidden="true"></i> Github</a>
+                            </li>
+                            <li>
 
-                            <a href="/logout">
-                                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
-                        </li>
-                    </ul>
+                                <a href="/logout">
+                                    <i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
+                            </li>
+                        </ul>
 
+                    </div>
+                    <!-- /.navbar-collapse -->
                 </div>
-                <!-- /.navbar-collapse -->
-            </div>
-            <!-- /.container -->
-        </nav>
-        <!-- /.navbar -->
-    </div>
-    <div class="container main">
-        <div class="row">
-            <div class="col-md-4 info-box">
-                <div class="info-title">
-                    <p>
-                        <i class="fa fa-cogs" aria-hidden="true"></i> 配置信息/Configuration</p>
-                </div>
-                <div class="info-body">
-                    <form name="config">
-                        <div class="item">
-                            <label class="theme-label">Server</label>
-                            <input class="theme-input" type="text" placeholder="required" required name="server" value="">
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">Port</label>
-                            <input class="theme-input" placeholder="default:53" type="number" name="port" value="">
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">Duration</label>
-                            <input class="theme-input" placeholder="default:60 seconds" type="number" name="duration" value="">
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">QPS</label>
-                            <input class="theme-input" placeholder="default:100qps" type="number" name="qps" value="">
-                        </div>
-
-                        <div class="item">
-                            <label class="theme-label">Domain</label>
-                            <input class="theme-input" type="text" name="domain" placeholder="required" value="" required>
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">Length</label>
-                            <input class="theme-input" type="number" name="domain_random_length" placeholder="default:5" value="">
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">Query Type</label>
-                            <input class="theme-input" type="text" name="query_type" placeholder="default:A" value="">
-                        </div>
-                        <div class="item">
-                            <label class="theme-label">Fixed Type</label>
-                            <div class="btn-group" role="group" aria-label="">
-                                <button type="button" data-value="true" class="btn  btn-fixed-select">Yes</button>
-                                <button type="button" data-value="false" class="btn  btn-fixed-select">No</button>
+                <!-- /.container -->
+            </nav>
+            <!-- /.navbar -->
+        </div>
+        <div class="container main">
+            <div class="row">
+                <div class="col-md-4 info-box">
+                    <div class="info-title">
+                        <p>
+                            <i class="fa fa-cogs" aria-hidden="true"></i> 配置信息/Configuration</p>
+                    </div>
+                    <div class="info-body">
+                        <form name="config">
+                            <div class="item">
+                                <label class="theme-label">Server</label>
+                                <input class="theme-input" type="text" placeholder="required" required name="server" value="">
                             </div>
-                        </div>
+                            <div class="item">
+                                <label class="theme-label">Port</label>
+                                <input class="theme-input" placeholder="default:53" type="number" name="port" value="">
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">Duration</label>
+                                <input class="theme-input" placeholder="default:60sec" type="number" name="duration" value="">
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">QPS</label>
+                                <input class="theme-input" placeholder="default:100" type="number" name="qps" value="">
+                            </div>
 
-                        <div class="modal fade" tabindex="-1" id="myConsoleModal" role="dialog">
-                            <div class="modal-dialog" role="document">
-                                <div class="modal-content theme-modal">
-                                    <div class="modal-body">
-                                        <div class="console" id="console-info">
+                            <div class="item">
+                                <label class="theme-label">Domain</label>
+                                <input class="theme-input" type="text" name="domain" placeholder="default:." value="">
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">Length</label>
+                                <input class="theme-input" type="number" name="domain_random_length" placeholder="default:5" value="">
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">Query Type</label>
+                                <input class="theme-input" type="text" name="query_type" placeholder="default:A" value="">
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">Fixed Type</label>
+                                <div class="btn-group" role="group" aria-label="">
+                                    <button type="button" data-value="true" class="btn  btn-fixed-select">Yes</button>
+                                    <button type="button" data-value="false" class="btn  btn-fixed-select">No</button>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" tabindex="-1" id="myConsoleModal" role="dialog">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content theme-modal">
+                                        <div class="modal-body">
+                                            <div class="console" id="console-info">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-cancel" data-dismiss="modal">Close</button>
                                         </div>
                                     </div>
+                                    <!-- /.modal-content -->
+                                </div>
+                                <!-- /.modal-dialog -->
+                            </div>
+                            <!-- /.modal -->
+                            <button type="button" class="btn btn-submit config-submit">
+                                <i class="fa fa-play-circle" aria-hidden="true"></i> Start</button>
+                            <button type="button" class="btn btn-submit config-kill">
+                                <i class="fa fa-stop-circle" aria-hidden="true"></i> Stop</button>
+                            <button type="button" class="btn btn-submit show-console right" data-toggle="modal" data-target="#myConsoleModal">
+                                <i class="fa fa-window-restore" aria-hidden="true"></i> Console</button>
+                        </form>
+                    </div>
+                    <div class="info-status master-status">
+                        <div class="sk-circle master-running hide">
+                            <div class="sk-circle1 sk-child"></div>
+                            <div class="sk-circle2 sk-child"></div>
+                            <div class="sk-circle3 sk-child"></div>
+                            <div class="sk-circle4 sk-child"></div>
+                            <div class="sk-circle5 sk-child"></div>
+                            <div class="sk-circle6 sk-child"></div>
+                            <div class="sk-circle7 sk-child"></div>
+                            <div class="sk-circle8 sk-child"></div>
+                            <div class="sk-circle9 sk-child"></div>
+                            <div class="sk-circle10 sk-child"></div>
+                            <div class="sk-circle11 sk-child"></div>
+                            <div class="sk-circle12 sk-child"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 info-box">
+                    <div class="info-title">
+                        <div class="modal fade" tabindex="-1" id="myAddAgentModal" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content theme-modal">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        <h4 class="modal-title">Add a new agent</h4>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form name="new-agent">
+                                            <div class="item">
+                                                <label class="theme-label">IP</label>
+                                                <input class="theme-input" type="text" name="ipaddress" value="">
+                                            </div>
+                                            <div class="item">
+                                                <label class="theme-label">Port</label>
+                                                <input class="theme-input" type="number" name="port" placeholder="default" value=""> </div>
+                                        </form>
+                                    </div>
                                     <div class="modal-footer">
+                                        <span class="add-node-loading hide">
+                                            <i class="fa fa-spinner fa-pulse fa-1x fa-fw"></i>
+                                            <span class="sr-only">Loading...</span>
+                                        </span>
                                         <button type="button" class="btn btn-cancel" data-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-submit new-agent">Save</button>
                                     </div>
                                 </div>
                                 <!-- /.modal-content -->
@@ -108,103 +170,48 @@
                             <!-- /.modal-dialog -->
                         </div>
                         <!-- /.modal -->
-                        <button type="button" class="btn btn-submit config-submit"><i class="fa fa-play-circle" aria-hidden="true"></i> Start</button>
-                        <button type="button" class="btn btn-submit config-kill"><i class="fa fa-stop-circle" aria-hidden="true"></i> Stop</button>
-                        <button type="button" class="btn btn-submit show-console right" data-toggle="modal" data-target="#myConsoleModal"><i class="fa fa-window-restore" aria-hidden="true"></i> Console</button>
-                    </form>
-                </div>
-                <div class="info-status master-status">
-                    <div class="sk-circle master-running hide">
-                        <div class="sk-circle1 sk-child"></div>
-                        <div class="sk-circle2 sk-child"></div>
-                        <div class="sk-circle3 sk-child"></div>
-                        <div class="sk-circle4 sk-child"></div>
-                        <div class="sk-circle5 sk-child"></div>
-                        <div class="sk-circle6 sk-child"></div>
-                        <div class="sk-circle7 sk-child"></div>
-                        <div class="sk-circle8 sk-child"></div>
-                        <div class="sk-circle9 sk-child"></div>
-                        <div class="sk-circle10 sk-child"></div>
-                        <div class="sk-circle11 sk-child"></div>
-                        <div class="sk-circle12 sk-child"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-8 info-box">
-                <div class="info-title">
-                    <div class="modal fade" tabindex="-1" id="myAddAgentModal" role="dialog">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content theme-modal">
-                                <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    <h4 class="modal-title">Add a new agent</h4>
-                                </div>
-                                <div class="modal-body">
-                                    <form name="new-agent">
-                                        <div class="item">
-                                            <label class="theme-label">IP</label>
-                                            <input class="theme-input" type="text" name="ipaddress" value="">
-                                        </div>
-                                        <div class="item">
-                                            <label class="theme-label">Port</label>
-                                            <input class="theme-input" type="number" name="port" placeholder="default" value=""> </div>
-                                    </form>
-                                </div>
-                                <div class="modal-footer">
-                                    <span class="add-node-loading hide">
-                                            <i class="fa fa-spinner fa-pulse fa-1x fa-fw"></i>
-                                            <span class="sr-only">Loading...</span>
-                                    </span>
-                                    <button type="button" class="btn btn-cancel" data-dismiss="modal">Close</button>
-                                    <button type="button" class="btn btn-submit new-agent">Save</button>
-                                </div>
-                            </div>
-                            <!-- /.modal-content -->
-                        </div>
-                        <!-- /.modal-dialog -->
-                    </div>
-                    <!-- /.modal -->
-                    <p>
-                        <i class="fa fa-list" aria-hidden="true"></i> 节点列表/NodeList
-                        <button type="button" class="btn btn-submit right" data-toggle="modal" data-target="#myAddAgentModal">
+                        <p>
+                            <i class="fa fa-list" aria-hidden="true"></i> 节点列表/NodeList
+                            <button type="button" class="btn btn-submit right" data-toggle="modal" data-target="#myAddAgentModal">
                                 <i class="fa fa-plus" aria-hidden="true"></i> Add</button>
-                    </p>
+                        </p>
 
 
-                </div>
-                <div class="info-body">
-                    <table class="table ">
-                        <thead>
-                            <tr>
-                                <th>IP Address</th>
-                                <th>Status</th>
-                                <th>Function</th>
-                            </tr>
-                        </thead>
-                        <tbody class="agent-list">
-                            {{with .iplist}} {{ range $key,$value := .}}
-                            <tr>
-                                <td><i class="fa fa-hdd-o" aria-hidden="true"></i> {{$value}}</td>
-                                <td>
-                                    <i class="fa fa-2x fa-check-circle-o" style="font-size: 1.5em;color:#1ff300;" aria-hidden="true"></i>
-                                </td>
-                                <td>
-                                    <button class="btn small-ping-button" data-item="{{$value}}">
+                    </div>
+                    <div class="info-body">
+                        <table class="table ">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Status</th>
+                                    <th>Function</th>
+                                </tr>
+                            </thead>
+                            <tbody class="agent-list">
+                                {{with .iplist}} {{ range $key,$value := .}}
+                                <tr>
+                                    <td>
+                                        <i class="fa fa-hdd-o" aria-hidden="true"></i> {{$value}}</td>
+                                    <td>
+                                        <i class="fa fa-2x fa-check-circle-o" style="font-size: 1.5em;color:#1ff300;" aria-hidden="true"></i>
+                                    </td>
+                                    <td>
+                                        <button class="btn small-ping-button" data-item="{{$value}}">
                                             <i class="fa fa-handshake-o" aria-hidden="true"></i> Ping</button>
-                                    <button class="btn small-delete-button" data-item="{{$value}}">
+                                        <button class="btn small-delete-button" data-item="{{$value}}">
                                             <i class="fa fa-trash" aria-hidden="true"></i> Delete</button>
-                                </td>
-                            </tr>
-                            {{ end }} {{end}}
-                        </tbody>
+                                    </td>
+                                </tr>
+                                {{ end }} {{end}}
+                            </tbody>
+                    </div>
                 </div>
-            </div>
-            <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
-            <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-            <script src="/public/js/main.js"></script>
-</body>
+                <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+                    crossorigin="anonymous"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+                <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+                    crossorigin="anonymous"></script>
+                <script src="/public/js/main.js"></script>
+    </body>
 
 </html>

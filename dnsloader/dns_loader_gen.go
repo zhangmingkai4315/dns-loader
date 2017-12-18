@@ -5,14 +5,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/briandowns/spinner"
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 )
 
 //GloablGenerator define  global control object
 var GloablGenerator Generator
+var globalStatus uint32
+
+// GetGlobalStatus 返回当前组件的运行状态
+func GetGlobalStatus() uint32 {
+	return globalStatus
+}
 
 type myDNSLoaderGenerator struct {
 	caller     Caller
@@ -24,6 +29,7 @@ type myDNSLoaderGenerator struct {
 	cancelFunc context.CancelFunc
 	callCount  uint64
 	workers    int
+	startTime  time.Time
 	result     map[uint8]uint64
 }
 
@@ -36,12 +42,13 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 		return false
 	}
 	atomic.StoreUint32(&mlg.status, STATUS_STARTING)
+	globalStatus = STATUS_STARTING
 	if mlg.qps > 0 {
 		interval := time.Duration(1e9 / mlg.qps)
 		log.Printf("setting throttle %v", interval)
 	}
 	atomic.StoreUint32(&mlg.status, STATUS_RUNNING)
-
+	globalStatus = STATUS_RUNNING
 	log.Println("new goroutine to generating dns packets")
 	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
 	log.Println("new goroutine to receive dns data from server")
@@ -62,28 +69,31 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 	if mlg.qps > 0 {
 		limiter = ratelimit.New(int(mlg.qps))
 	}
-
+	mlg.startTime = time.Now()
 	mlg.generatorLoad(limiter, s)
-	log.Println("waiting for program shutdown....")
-	time.Sleep(5)
-	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", mlg.CallCount())
-	log.WithFields(log.Fields{"result": true}).Infof("runing time %v", mlg.duration)
-	var counter uint64
-	for k, v := range mlg.result {
-		counter = v + counter
-		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f%%]", DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
-	}
-	restUnknown := mlg.CallCount() - counter
-	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f%%]", restUnknown, float64(restUnknown*100)/float64(mlg.CallCount()))
 	return true
 }
 
 func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
 	log.Printf("prepare to stop load test [%s]", err)
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPING)
+	globalStatus = STATUS_STOPPING
 	log.Println("try to stop channel...")
+	log.Println("doing calculation work")
+	runningTime := time.Since(mlg.startTime)
+	time.Sleep(1 * time.Second)
+	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", mlg.CallCount())
+	log.WithFields(log.Fields{"result": true}).Infof("runing time %v", runningTime)
+	var counter uint64
+	for k, v := range mlg.result {
+		counter = v + counter
+		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
+	}
+	restUnknown := mlg.CallCount() - counter
+	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", restUnknown, float64(restUnknown*100)/float64(mlg.CallCount()))
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPED)
-	log.Println("stop load test success!")
+	globalStatus = STATUS_STOPPED
+	log.Println("stop success!")
 }
 
 func (mlg *myDNSLoaderGenerator) sendNewRequest() {
@@ -135,6 +145,7 @@ func (mlg *myDNSLoaderGenerator) Stop() bool {
 		&mlg.status, STATUS_RUNNING, STATUS_STOPPING) {
 		return false
 	}
+	globalStatus = STATUS_STOPPING
 	mlg.cancelFunc()
 	for {
 		if atomic.LoadUint32(&mlg.status) == STATUS_STOPPED {
@@ -181,7 +192,6 @@ func GenTrafficFromConfig(config *Configuration) {
 	log.Println("config the dns loader success")
 	log.Printf("current configuration for dns loader is server:%s|port:%d",
 		dnsclient.Config.Server, dnsclient.Config.Port)
-	// log.Printf("%+v", config)
 	param := GeneratorParam{
 		Caller:   dnsclient,
 		Timeout:  1000 * time.Millisecond,

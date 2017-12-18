@@ -97,23 +97,30 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	decoder := json.NewDecoder(req.Body)
+	status := dnsloader.GetGlobalStatus()
+	if status != dnsloader.STATUS_STOPPED && status != dnsloader.STATUS_INIT {
+		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
+		return
+	}
+	//
 	var config dnsloader.Configuration
+	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&config)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode config fail"})
-	} else {
-		// localTraffic
-		err := config.Valid()
-		if err != nil {
-			log.Println(err)
-			r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
-			return
-		}
-		go dnsloader.GenTrafficFromConfig(&config)
-		go nodeManager.Call(Start, config)
-		r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+		return
 	}
+	// localTraffic
+	err = config.Valid()
+	if err != nil {
+		log.Println(err)
+		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
+		return
+	}
+	go dnsloader.GenTrafficFromConfig(&config)
+	go nodeManager.Call(Start, config)
+	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+
 }
 
 func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
@@ -132,21 +139,21 @@ func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 
 func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	if MessagesHub.Len() > 0 {
-		if data, err := MessagesHub.Get(); err != nil {
-			r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
-		} else {
-			var messages []Message
-			err := json.Unmarshal(data, &messages)
-			if err != nil {
-				r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
-				return
-			}
-			r.JSON(w, http.StatusOK, map[string][]Message{"data": messages})
-		}
+	if MessagesHub.Len() <= 0 {
+		r.JSON(w, http.StatusOK, map[string]string{"status": "no update"})
 		return
 	}
-	r.JSON(w, http.StatusOK, map[string]string{"status": "no update"})
+	data, err := MessagesHub.Get()
+	if err != nil {
+		r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
+	}
+	var messages []Message
+	err = json.Unmarshal(data, &messages)
+	if err != nil {
+		r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
+		return
+	}
+	r.JSON(w, http.StatusOK, map[string][]Message{"data": messages})
 }
 
 func login(config *dnsloader.Configuration) func(w http.ResponseWriter, req *http.Request) {
@@ -166,7 +173,8 @@ func login(config *dnsloader.Configuration) func(w http.ResponseWriter, req *htt
 			} else {
 				http.Redirect(w, req, "/login", 401)
 			}
-		} else if req.Method == "GET" {
+		}
+		if req.Method == "GET" {
 			r := render.New(render.Options{})
 			r.HTML(w, http.StatusOK, "login", nil)
 		}

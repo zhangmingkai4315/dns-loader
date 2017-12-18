@@ -41,22 +41,29 @@ func ping(w http.ResponseWriter, req *http.Request) {
 func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
+	// 判断是否有在工作的发包程序
+	status := dnsloader.GetGlobalStatus()
+	if status != dnsloader.STATUS_STOPPED && status != dnsloader.STATUS_INIT {
+		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
+		return
+	}
 	var config dnsloader.Configuration
 	err := decoder.Decode(&config)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode config fail"})
-	} else {
-		// localTraffic
-		err := config.Valid()
-		if err != nil {
-			log.Println(err)
-			r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
-			return
-		}
-		log.Printf("receive new job id:%s\n", config.ID)
-		go dnsloader.GenTrafficFromConfig(&config)
-		r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+		return
 	}
+	// localTraffic
+	err = config.Valid()
+	if err != nil {
+		log.Println(err)
+		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
+		return
+	}
+	log.Printf("receive new job id:%s\n", config.ID)
+	go dnsloader.GenTrafficFromConfig(&config)
+	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+
 }
 
 func killAgentTraffic(w http.ResponseWriter, req *http.Request) {

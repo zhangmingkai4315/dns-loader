@@ -26,7 +26,7 @@ type Configuration struct {
 	QPS                int      `json:"qps" valid:"-"`
 	Server             string   `json:"server" valid:"ip"`
 	Port               int      `json:"port" valid:"-"`
-	Domain             string   `json:"domain" valid:"dns"`
+	Domain             string   `json:"domain" valid:"-"`
 	DomainRandomLength int      `json:"domain_random_length" valid:"-"`
 	QueryTypeFixed     bool     `json:"query_type_fixed" valid:"-"`
 	QueryType          string   `json:"query_type" valid:"-"`

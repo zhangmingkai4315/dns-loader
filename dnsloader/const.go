@@ -5,6 +5,7 @@ type ReturnCode int
 
 //dns loader running status
 const (
+	STATUS_INIT     uint32 = 0
 	STATUS_STARTING uint32 = 1
 	STATUS_RUNNING  uint32 = 2
 	STATUS_STOPPING uint32 = 3

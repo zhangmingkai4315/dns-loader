@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,7 +15,7 @@ import (
 )
 
 var (
-	loaderType = flag.String("t", "", "")
+	loaderType = flag.String("t", "master", "")
 	timeout    = flag.Int("timeout", 5, "")
 	master     = flag.String("master", "", "")
 	duration   = flag.Int("D", 60, "")
@@ -42,13 +43,14 @@ Options:
   -R       enable random query type. Default is false
   -Q       query type. Default is A
   -debug   enable debug mode
-
 `
 
+//MyHook 定义logrus的hook类型
 type MyHook struct{}
 
 var fmter = new(log.TextFormatter)
 
+// Levels 必须实施的接口类型，返回所有的打印级别信息
 func (h *MyHook) Levels() []log.Level {
 	return []log.Level{
 		log.InfoLevel,
@@ -59,6 +61,7 @@ func (h *MyHook) Levels() []log.Level {
 	}
 }
 
+// Fire 必须实施的接口类型，将打印的信息进行格式化，此处使用text格式化
 func (h *MyHook) Fire(entry *log.Entry) (err error) {
 	line, err := fmter.Format(entry)
 	if err == nil {
@@ -69,6 +72,7 @@ func (h *MyHook) Fire(entry *log.Entry) (err error) {
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
+	// 将所有日志同时写入messagehub(传递到前端的console)
 	log.SetOutput(web.MessagesHub)
 	log.AddHook(&MyHook{})
 }
@@ -92,7 +96,6 @@ func main() {
 		}()
 	}
 
-	// Start docker container first
 	config.LoaderType = *loaderType
 	// if config file not given, try load all the parameters from command line
 	if *configFile == "" {
@@ -112,13 +115,24 @@ func main() {
 		if err := config.Valid(); err != nil {
 			usageAndExit(err.Error())
 		}
+		// 加入信号量，当程序直接退出的时候，仍旧打印一些信息
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			<-c
+			if dnsloader.GloablGenerator != nil {
+				dnsloader.GloablGenerator.Stop()
+			}
+			os.Exit(1)
+		}()
 		dnsloader.GenTrafficFromConfig(config)
 		return
 	}
+	// 加载配置文件
 	log.Printf("load configuration from file:%s", *configFile)
 	err := config.LoadConfigurationFromIniFile(*configFile)
 	if err != nil {
-		log.Panicf("read configuration file error:%s", err.Error())
+		usageAndExit(fmt.Sprintf("read configuration file error:%s", err.Error()))
 	}
 	if *loaderType == "master" {
 		log.Printf("start web for control panel default web address:%s", config.HTTPServer)

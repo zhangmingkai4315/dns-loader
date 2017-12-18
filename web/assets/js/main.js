@@ -6,7 +6,7 @@
 function getFormData($form) {
     var formArray = $form.serializeArray()
     var result = {}
-    $.map(formArray, function(n, i) {
+    $.map(formArray, function (n, i) {
         result[n["name"]] = n["value"]
     })
     return result
@@ -26,8 +26,7 @@ function validateConfig(result) {
     }
 
     if (result["domain"] == "") {
-        toastr.error('query domain is empty', 'Config Error')
-        return false
+        result["domain"] = "."
     }
     if (result["query_type"] == "") {
         result["query_type"] = "A"
@@ -44,8 +43,8 @@ function validateConfig(result) {
         return false
     }
     result["domain_random_length"] = isNaN(parseInt(result["domain_random_length"])) ? 5 : parseInt(result["domain_random_length"])
-    if (result["domain_random_length"] <= 0) {
-        toastr.error('Random length number should be larger than 0', 'Length Error')
+    if (result["domain_random_length"] < 0) {
+        toastr.error('Random length number should not smaller than 0', 'Length Error')
         return false
     }
     result["duration"] = isNaN(parseInt(result["duration"])) ? 60 : parseInt(result["duration"])
@@ -64,7 +63,7 @@ function Logger(id) {
         return
     }
     var self = this;
-    this.timer = setInterval(function() {
+    this.timer = setInterval(function () {
         // 定期执行数据清理工作,仅仅保留其中的50条数据
         // 清理数组中的数据
         if (self.messageArray.length > 100) {
@@ -72,7 +71,7 @@ function Logger(id) {
         }
         // 清理DOM中的元素,只保留50个最新的元素
         if ($(".message").length > 100) {
-            $(".message").splice(50, $(".message").length).map(function(div) {
+            $(".message").splice(50, $(".message").length).map(function (div) {
                 div.remove();
             })
         }
@@ -105,7 +104,7 @@ function getDate() {
  * @property {string} status    - 代表了信息的状态
  * @property {string} message   - 代表了信息的详细内容
  */
-Logger.prototype.formatMessage = function(message) {
+Logger.prototype.formatMessage = function (message) {
     var status = ""
     switch (message.status) {
         case "error":
@@ -126,42 +125,42 @@ Logger.prototype.formatMessage = function(message) {
  * @param {string} status    - 代表了信息的状态
  * @param {string} message   - 代表了信息的详细内容
  */
-Logger.prototype.appendMessage = function(message, status) {
-        if (typeof status === 'undefined') {
-            status = "info"
-        }
-        var messageStruct = {
-            message: message,
-            status: status
-        }
-        this.messageArray.push(messageStruct)
-        this.logBoxContainer.prepend(this.formatMessage(messageStruct))
+Logger.prototype.appendMessage = function (message, status) {
+    if (typeof status === 'undefined') {
+        status = "info"
     }
-    /**
-     * 记录一般性的通用消息并增加到DOM
-     *
-     * @param {string} message   - 代表了信息的详细内容
-     */
-Logger.prototype.info = function(message) {
-        this.appendMessage(message, "info")
+    var messageStruct = {
+        message: message,
+        status: status
     }
-    /**
-     * 记录错误消息并增加到DOM
-     *
-     * @param {string} message   - 代表了信息的详细内容
-     */
-Logger.prototype.error = function(message) {
-        this.appendMessage(message, "error")
-    }
-    /**
-     * 记录普通告警消息并增加到DOM
-     *
-     * @param {string} message   - 代表了信息的详细内容
-     */
-Logger.prototype.warning = function(message) {
+    this.messageArray.push(messageStruct)
+    this.logBoxContainer.prepend(this.formatMessage(messageStruct))
+}
+/**
+ * 记录一般性的通用消息并增加到DOM
+ *
+ * @param {string} message   - 代表了信息的详细内容
+ */
+Logger.prototype.info = function (message) {
+    this.appendMessage(message, "info")
+}
+/**
+ * 记录错误消息并增加到DOM
+ *
+ * @param {string} message   - 代表了信息的详细内容
+ */
+Logger.prototype.error = function (message) {
+    this.appendMessage(message, "error")
+}
+/**
+ * 记录普通告警消息并增加到DOM
+ *
+ * @param {string} message   - 代表了信息的详细内容
+ */
+Logger.prototype.warning = function (message) {
     this.appendMessage(message, "warning")
 }
-Logger.prototype.batch = function(messages) {
+Logger.prototype.batch = function (messages) {
     for (var i = 0; i < messages.length; i++) {
         switch (messages[i]['level']) {
             case "info":
@@ -183,34 +182,41 @@ var logger = new Logger("console-info")
 
 
 
-$(document).ready(function() {
-    $(".btn-fixed-select").on("click", function() {
+$(document).ready(function () {
+    $(".btn-fixed-select").on("click", function () {
         $(".btn-fixed-select").removeClass("active")
         $(this).addClass("active")
     });
 
-    $(".config-submit").click(function() {
+    $(".config-submit").click(function () {
         // serial data
         var result = getFormData($('form[name="config"]'))
         var fixedType = $(".btn-fixed-select.active").attr("data-value") === "true" ? true : false
-            // validate data
-            // sende data
+        // validate data
+        // sende data
         result['query_type_fixed'] = fixedType
         if (validateConfig(result) === false) {
             return
         }
-        $('.master-running').removeClass("hide")
+
         $.ajax({
             type: "POST",
             url: "/start",
             data: JSON.stringify(result),
-            success: function(data) {
-                console.log(data)
+            success: function (data) {
+                $('.master-running').removeClass("hide")
+            },
+            error: function (data) {
+                var jsonObj = data.responseJSON
+                if (jsonObj && jsonObj['status'] && jsonObj['status'] === 'error') {
+                    toastr.error(jsonObj['message'] || 'service not available')
+                    return
+                }
             },
             contentType: "application/json"
         })
     })
-    $(".small-delete-button").click(function() {
+    $(".small-delete-button").click(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
@@ -220,11 +226,11 @@ $(document).ready(function() {
             type: "DELETE",
             url: "/nodes",
             data: JSON.stringify(data),
-            success: function(data) {
+            success: function (data) {
                 toastr.info("delete success")
                 window.location.reload()
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Delete fail", err.responseJSON.message)
                 } else {
@@ -235,7 +241,7 @@ $(document).ready(function() {
         })
     })
 
-    $(".small-ping-button").click(function() {
+    $(".small-ping-button").click(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
@@ -245,15 +251,15 @@ $(document).ready(function() {
             type: "POST",
             url: "/ping",
             data: JSON.stringify(data),
-            success: function(data) {
+            success: function (data) {
                 toastr.success("ping success")
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("ping fail", err.responseJSON.message)
                 } else {
                     toastr.error("ping fail")
-                        // change the color of status to black
+                    // change the color of status to black
                 }
             },
             contentType: "application/json"
@@ -261,17 +267,17 @@ $(document).ready(function() {
     })
 
 
-    $('.config-kill').click(function() {
+    $('.config-kill').click(function () {
         console.log("stop signal send to master server")
         $.ajax({
             type: "GET",
             url: "/stop",
-            success: function(response) {
+            success: function (response) {
                 console.log(response)
                 $('.master-running').addClass("hide")
                 toastr.success("stop traffic success")
             },
-            error: function(err) {
+            error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Error", err.responseJSON.message)
                 } else {
@@ -282,7 +288,7 @@ $(document).ready(function() {
         })
     })
 
-    $('.new-agent').click(function() {
+    $('.new-agent').click(function () {
         var data = getFormData($("form[name='new-agent']"))
         if (typeof data.ipaddress === 'undefined' || data.ipaddress === "") {
             toastr.error('IP address does not exist', 'IP Error')
@@ -298,13 +304,13 @@ $(document).ready(function() {
             type: "POST",
             url: "/nodes",
             data: JSON.stringify(data),
-            success: function(response) {
+            success: function (response) {
                 $(".add-node-loading").addClass("hide")
-                    // console.log(data)
-                    //     // Add to list 
+                // console.log(data)
+                //     // Add to list 
                 window.location.reload()
             },
-            error: function(err) {
+            error: function (err) {
                 $(".add-node-loading").addClass("hide")
                 if (err && err.responseJSON && err.responseJSON.message) {
                     toastr.error("Add new node fail", err.responseJSON.message)
@@ -317,13 +323,13 @@ $(document).ready(function() {
     })
 
     // 每隔2秒发送一次查询日志的请求
-    setInterval(function() {
+    setInterval(function () {
         $.ajax({
             type: "GET",
             url: "/status",
-            success: function(response) {
+            success: function (response) {
                 if (response && typeof response.data === "object") {
-                    var result = response.data.filter(function(d) {
+                    var result = response.data.filter(function (d) {
                         if (typeof d.result !== 'undefined' && d.result === true) {
                             console.log(d)
                             return true
