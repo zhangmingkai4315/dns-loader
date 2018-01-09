@@ -71,7 +71,7 @@
   branch = "master"
   name = "github.com/zhangmingkai4315/go-dns-shooter"
   packages = ["dns"]
-  revision = "3d6b3c5ff17efc826ebc21a9d55918c1af749198"
+  revision = "208a27d044dbe521b0f31f2ffeb9247d5027703b"
 
 [[projects]]
   branch = "master"
