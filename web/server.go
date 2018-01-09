@@ -191,7 +191,7 @@ func logout(w http.ResponseWriter, req *http.Request) {
 }
 
 // NewServer function create the http api
-func NewServer() {
+func NewServer() error {
 	config := dnsloader.GetGlobalConfig()
 	key := []byte(config.AppSecrect)
 	nodeManager = NewNodeManager(config)
@@ -209,5 +209,6 @@ func NewServer() {
 	log.Println("http server route init success")
 	log.Printf("static file folder:%s", http.Dir("/web/assets"))
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))
-	http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
+	err := http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
+	return err
 }

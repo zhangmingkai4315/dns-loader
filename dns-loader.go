@@ -136,7 +136,10 @@ func main() {
 	}
 	if *loaderType == "master" {
 		log.Printf("start web for control panel default web address:%s", config.HTTPServer)
-		web.NewServer()
+		err := web.NewServer()
+		if err != nil {
+			log.Printf("start web server fail: %s", err)
+		}
 		return
 	}
 	if *loaderType == "agent" {

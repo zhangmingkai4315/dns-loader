@@ -333,7 +333,7 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 
 // InitialPacket initial the basic setup
 func (dns *DNSPacket) InitialPacket(domain string, length int, queryType uint16) {
-	log.Println("Start generate dns packet")
+	log.Printf("Start generate dns packet:[domain=%s,length=%d,type=%d]", domain, length, queryType)
 	dns.SetQuestion(FqdnFormat(GenRandomDomain(length, domain)), queryType)
 	dns.ToBytes()
 	dns.RandomLength = length

@@ -1,9 +1,22 @@
 # dns-loader
 go语言实现的dns负载测试工具
 
+### 开发环境
+
+如需开发，可以使用docker-envirments文件夹下的docker镜像启动一个bind dns server
+启动后服务器的地址可以通过`docker inspect $(Your docker id)`查看
+
+启动docker环境命令：
+
+```
+docker build -t named-root .
+docker run -d named-root
+```
+
 ### 1 启动程序
 
 #### 1.1 参数说明
+
 
 ```
 Usage: dns-loader [options...] 
@@ -84,4 +97,5 @@ go-torch -t 5
 firefox torch.svg
 
 ```
+
 
