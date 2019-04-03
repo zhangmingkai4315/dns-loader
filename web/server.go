@@ -206,8 +206,6 @@ func NewServer() error {
 	r.HandleFunc("/start", auth(startDNSTraffic)).Methods("POST")
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
 	r.HandleFunc("/status", (getCurrentStatus)).Methods("GET")
-	log.Println("http server route init success")
-	log.Printf("static file folder:%s", http.Dir("/web/assets"))
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))
 	err := http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
 	return err

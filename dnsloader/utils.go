@@ -1,7 +1,9 @@
 package dnsloader
 
 import (
+	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
@@ -10,6 +12,13 @@ var letters = []byte("1234567890abcdefghijklmnopqrstuvwxyz")
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println("Fatal error ", err.Error())
+		os.Exit(1)
+	}
 }
 
 // StringInSlice find if string type object a in a string list

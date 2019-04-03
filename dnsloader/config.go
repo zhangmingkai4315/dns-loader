@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 
 	"github.com/asaskevich/govalidator"
 	"gopkg.in/ini.v1"
@@ -42,6 +42,16 @@ type Configuration struct {
 var globalConfig *Configuration
 var globalConfigFileHandler *ini.File
 var configFileName string
+
+// NewConfigurationFromFile load the configuration and save to global variable
+func NewConfigurationFromFile(file string) (*Configuration, error) {
+	globalConfig = &Configuration{}
+	err := globalConfig.LoadConfigurationFromIniFile(file)
+	if err != nil {
+		return nil, err
+	}
+	return globalConfig, nil
+}
 
 func GetGlobalConfig() *Configuration {
 	if globalConfig == nil {
