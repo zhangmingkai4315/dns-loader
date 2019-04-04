@@ -7,12 +7,11 @@ import (
 
 	"github.com/zhangmingkai4315/dns-loader/dns"
 
-	"github.com/briandowns/spinner"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 )
 
-//GloablGenerator define  global control object
+//GloablGenerator define global control object
 var GloablGenerator Generator
 var globalStatus uint32
 
@@ -51,7 +50,6 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 	}
 	atomic.StoreUint32(&mlg.status, STATUS_RUNNING)
 	globalStatus = STATUS_RUNNING
-	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
 	log.Infoln("create new thread to receive dns data from server")
 	go func() {
 		// recive data from connections
@@ -71,7 +69,8 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 		limiter = ratelimit.New(int(mlg.qps))
 	}
 	mlg.startTime = time.Now()
-	mlg.generatorLoad(limiter, s)
+	log.Printf("start push packets to dns server and will stop at %s later...", mlg.duration)
+	mlg.generatorLoad(limiter)
 	return true
 }
 
@@ -89,7 +88,6 @@ func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
 		counter = v + counter
 		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", dns.DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
 	}
-	log.Println(mlg.CallCount(), counter)
 	var unknown uint64
 	if managerCounter > counter {
 		unknown = managerCounter - counter
@@ -111,37 +109,19 @@ func (mlg *myDNSLoaderGenerator) sendNewRequest() {
 	mlg.caller.Call(rawRequest)
 }
 
-func (mlg *myDNSLoaderGenerator) generatorLoad(limiter ratelimit.Limiter, spinnerInstance *spinner.Spinner) {
-	spinnerInstance.Start()
-	if mlg.qps > 0 {
-		for {
-			select {
-			case <-mlg.ctx.Done():
-				spinnerInstance.Stop()
-				mlg.prepareStop(mlg.ctx.Err())
-				return
-			default:
-			}
-			limiter.Take()
-			rawRequest := mlg.caller.BuildReq()
-			mlg.caller.Call(rawRequest)
-			atomic.AddUint64(&mlg.callCount, 1)
+func (mlg *myDNSLoaderGenerator) generatorLoad(limiter ratelimit.Limiter) {
+	for {
+		select {
+		case <-mlg.ctx.Done():
+			mlg.prepareStop(mlg.ctx.Err())
+			return
+		default:
 		}
-	} else {
-		for {
-			select {
-			case <-mlg.ctx.Done():
-				spinnerInstance.Stop()
-				mlg.prepareStop(mlg.ctx.Err())
-				return
-			default:
-			}
-			rawRequest := mlg.caller.BuildReq()
-			mlg.caller.Call(rawRequest)
-			atomic.AddUint64(&mlg.callCount, 1)
-		}
+		limiter.Take()
+		rawRequest := mlg.caller.BuildReq()
+		mlg.caller.Call(rawRequest)
+		atomic.AddUint64(&mlg.callCount, 1)
 	}
-
 }
 
 func (mlg *myDNSLoaderGenerator) Stop() bool {
