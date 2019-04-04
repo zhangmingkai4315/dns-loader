@@ -1,0 +1,6 @@
+version: '3'
+services:
+  dns:
+    build: ./docker/.
+    ports:
+      - "127.0.0.1:53:53/udp"

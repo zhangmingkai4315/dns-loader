@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
+	"github.com/zhangmingkai4315/dns-loader/core"
 	"github.com/zhangmingkai4315/dns-loader/web"
 )
 
@@ -33,7 +33,7 @@ func init() {
 	masterCmd.PersistentFlags().StringVar(&masterConfigFile, "config", "", "config file (default is $HOME/config.ini)")
 }
 
-func initConfig(cfgFile string) *dnsloader.Configuration {
+func initConfig(cfgFile string) *core.Configuration {
 	if cfgFile == "" {
 		// Find current application directory.
 		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -43,7 +43,7 @@ func initConfig(cfgFile string) *dnsloader.Configuration {
 		cfgFile = filepath.Join(dir, "config.ini")
 	}
 	var err error
-	config, err := dnsloader.NewConfigurationFromFile(cfgFile)
+	config, err := core.NewConfigurationFromFile(cfgFile)
 	if err != nil {
 		log.Fatalf("load config file %s error: %s", cfgFile, err)
 	}

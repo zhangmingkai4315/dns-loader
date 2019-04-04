@@ -1,4 +1,4 @@
-package dnsloader
+package core
 
 import (
 	"context"

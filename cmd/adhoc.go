@@ -4,7 +4,8 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
+
+	"github.com/zhangmingkai4315/dns-loader/core"
 )
 
 var (
@@ -34,8 +35,8 @@ var adhocCmd = &cobra.Command{
 	Short: "Run dnsloader in adhoc mode",
 	Long:  `Run dnsloader in adhoc mode using arguments to gen dns packets and quit the process when job done`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var config *dnsloader.Configuration
-		config = dnsloader.GetGlobalConfig()
+		var config *core.Configuration
+		config = core.GetGlobalConfig()
 		config.Domain = domain
 		config.DomainRandomLength = random
 		config.QPS = qps
@@ -47,6 +48,6 @@ var adhocCmd = &cobra.Command{
 		if err := config.Valid(); err != nil {
 			log.Panicf("argument validation error:%s", err)
 		}
-		dnsloader.GenTrafficFromConfig(config)
+		core.GenTrafficFromConfig(config)
 	},
 }

@@ -1,0 +1,20 @@
+$ORIGIN .
+$TTL 86400      ; 1 day
+@ IN    SOA     a.dns.test  a.dns.test. (
+    2014021801 ;serial
+    1800 ;refresh every 30 min
+    900 ;retry every 15 min
+    604800 ;expire after a week
+    86400 ;minimum of 15 min
+)
+
+.			     IN	    NS	    a.dns.test.
+cn.	             IN	    NS      a.dns.cn.
+                 IN	    NS      b.dns.cn.
+a.dns.cn.        IN     A       192.168.1.1
+b.dns.cn.        IN     A       192.168.1.2
+
+test.	         IN	    NS      a.dns.test.
+                 IN	    NS      b.dns.test.
+a.dns.test.      IN     A       192.168.1.1
+b.dns.test.      IN     A       192.168.1.2

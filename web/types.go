@@ -3,8 +3,8 @@ package web
 import (
 	"fmt"
 
-	"github.com/nu7hatch/gouuid"
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
+	uuid "github.com/nu7hatch/gouuid"
+	"github.com/zhangmingkai4315/dns-loader/core"
 )
 
 // Event define the event send to all node
@@ -46,7 +46,7 @@ func (ipp *IPWithPort) toString(defaultPort int) string {
 type RPCCall struct {
 	ID      uuid.UUID
 	Event   Event
-	Config  dnsloader.Configuration
+	Config  core.Configuration
 	Message string
 }
 

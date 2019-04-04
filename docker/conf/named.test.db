@@ -8,8 +8,5 @@ $TTL 86400      ; 1 day
     86400 ;minimum of 15 min
 )
 
-.			     IN	    NS	    a.dns.test.
-a.dns.test.	     IN	    A       192.168.0.2
-test.			 IN	    NS	    a.dns.test.
-example.         IN     NS      a.dns.example.
-a.dns.example.   IN     A       192.168.0.3
+example   IN  A 192.168.1.1
+www       IN  A 192.168.1.1

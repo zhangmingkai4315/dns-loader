@@ -9,11 +9,9 @@ import (
 	"net/rpc"
 	"time"
 
+	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
-
-	"github.com/nu7hatch/gouuid"
+	"github.com/zhangmingkai4315/dns-loader/core"
 )
 
 // NodeStatus define the one of node status
@@ -38,11 +36,11 @@ type NodeManager struct {
 	IPList     []string
 	IPStatus   map[string][]NodeStatus
 	TaskStatus []string
-	config     *dnsloader.Configuration
+	config     *core.Configuration
 }
 
 // NewNodeManager will create a new node manager
-func NewNodeManager(c *dnsloader.Configuration) *NodeManager {
+func NewNodeManager(c *core.Configuration) *NodeManager {
 	ipstatus := make(map[string][]NodeStatus)
 	return &NodeManager{
 		IPList:     c.Agents,
@@ -64,9 +62,9 @@ func (manager *NodeManager) AddNode(ip string, port int) error {
 		return err
 	}
 	log.Println("ping agent success")
-	if !dnsloader.StringInSlice(ip, manager.IPList) {
+	if !core.StringInSlice(ip, manager.IPList) {
 		manager.IPList = append(manager.IPList, ip)
-		config := dnsloader.GetGlobalConfig()
+		config := core.GetGlobalConfig()
 		if err != nil {
 			return err
 		}
@@ -90,9 +88,9 @@ func (manager *NodeManager) AddStatus(ip string, status Event, message string) e
 
 // Remove will remove the ip from current list
 func (manager *NodeManager) Remove(deleteip string) (err error) {
-	manager.IPList = dnsloader.RemoveStringInSlice(deleteip, manager.IPList)
+	manager.IPList = core.RemoveStringInSlice(deleteip, manager.IPList)
 	delete(manager.IPStatus, deleteip)
-	config := dnsloader.GetGlobalConfig()
+	config := core.GetGlobalConfig()
 	if err != nil {
 		return err
 	}
@@ -134,7 +132,7 @@ func (manager *NodeManager) callStart(ip string, data interface{}) (err error) {
 		Timeout: time.Second * 10,
 	}
 
-	config, ok := data.(dnsloader.Configuration)
+	config, ok := data.(core.Configuration)
 	if ok != true {
 		return errors.New("config data fail to send")
 	}

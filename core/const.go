@@ -1,4 +1,4 @@
-package dnsloader
+package core
 
 //STATUS hold dns loader running status
 const (

@@ -8,17 +8,18 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/zhangmingkai4315/dns-loader/core"
+
 	"github.com/gorilla/mux"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/unrolled/render"
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
 )
 
 // Agent define the agent  object
 type Agent struct {
 	ID     string
 	Status Event
-	config dnsloader.Configuration
+	config core.Configuration
 }
 
 var agent *Agent
@@ -42,12 +43,12 @@ func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
 	// 判断是否有在工作的发包程序
-	status := dnsloader.GetGlobalStatus()
-	if status != dnsloader.STATUS_STOPPED && status != dnsloader.STATUS_INIT {
+	status := core.GetGlobalStatus()
+	if status != core.STATUS_STOPPED && status != core.STATUS_INIT {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
 		return
 	}
-	var config dnsloader.Configuration
+	var config core.Configuration
 	err := decoder.Decode(&config)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode config fail"})
@@ -61,14 +62,14 @@ func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	log.Printf("receive new job id:%s\n", config.ID)
-	go dnsloader.GenTrafficFromConfig(&config)
+	go core.GenTrafficFromConfig(&config)
 	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
 
 }
 
 func killAgentTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	if stopStatus := dnsloader.GloablGenerator.Stop(); true != stopStatus {
+	if stopStatus := core.GloablGenerator.Stop(); true != stopStatus {
 		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "ServerFail"})
 		return
 	}
@@ -76,7 +77,7 @@ func killAgentTraffic(w http.ResponseWriter, req *http.Request) {
 }
 
 // NewAgentServer function create the http api
-func NewAgentServer(config *dnsloader.Configuration) {
+func NewAgentServer(config *core.Configuration) {
 	agent = NewAgent()
 	r := mux.NewRouter()
 	r.HandleFunc("/ping", ping).Methods("GET")

@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	log "github.com/sirupsen/logrus"
 	"github.com/unrolled/render"
-	"github.com/zhangmingkai4315/dns-loader/dnsloader"
+	"github.com/zhangmingkai4315/dns-loader/core"
 )
 
 var currentPath string
@@ -97,13 +96,13 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	status := dnsloader.GetGlobalStatus()
-	if status != dnsloader.STATUS_STOPPED && status != dnsloader.STATUS_INIT {
+	status := core.GetGlobalStatus()
+	if status != core.STATUS_STOPPED && status != core.STATUS_INIT {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
 		return
 	}
 	//
-	var config dnsloader.Configuration
+	var config core.Configuration
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&config)
 	if err != nil {
@@ -117,7 +116,7 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
 		return
 	}
-	go dnsloader.GenTrafficFromConfig(&config)
+	go core.GenTrafficFromConfig(&config)
 	go nodeManager.Call(Start, config)
 	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
 
@@ -125,11 +124,11 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 
 func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	if dnsloader.GloablGenerator == nil || dnsloader.GloablGenerator.Status() != dnsloader.STATUS_RUNNING {
+	if core.GloablGenerator == nil || core.GloablGenerator.Status() != core.STATUS_RUNNING {
 		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "Not Running"})
 		return
 	}
-	if stopStatus := dnsloader.GloablGenerator.Stop(); true != stopStatus {
+	if stopStatus := core.GloablGenerator.Stop(); true != stopStatus {
 		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "Server Fail"})
 		return
 	}
@@ -156,7 +155,7 @@ func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 	r.JSON(w, http.StatusOK, map[string][]Message{"data": messages})
 }
 
-func login(config *dnsloader.Configuration) func(w http.ResponseWriter, req *http.Request) {
+func login(config *core.Configuration) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		session, _ := store.Get(req, "dns-loader")
 		if user, ok := session.Values["username"].(string); ok && user != "" {
@@ -192,7 +191,7 @@ func logout(w http.ResponseWriter, req *http.Request) {
 
 // NewServer function create the http api
 func NewServer() error {
-	config := dnsloader.GetGlobalConfig()
+	config := core.GetGlobalConfig()
 	key := []byte(config.AppSecrect)
 	nodeManager = NewNodeManager(config)
 	store = sessions.NewCookieStore(key)

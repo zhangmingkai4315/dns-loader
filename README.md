@@ -3,14 +3,9 @@ go语言实现的dns负载测试工具
 
 ### 开发环境
 
-如需开发，可以使用docker-envirments文件夹下的docker镜像启动一个bind dns server
-启动后服务器的地址可以通过`docker inspect $(Your docker id)`查看
-
-启动docker环境命令：
-
+如需开发，可以启动一个权威DNS服务器用于测试使用, 权威配置文件在docker目录中conf文件夹下
 ```
-docker build -t named-root .
-docker run -d named-root
+docker-compose up
 ```
 
 ### 1 启动程序
@@ -21,8 +16,8 @@ docker run -d named-root
 
 ```shell
 Usage:
-  dnsloader [flags]
-  dnsloader [command]
+  dns-loader [flags]
+  dns-loader [command]
 
 Available Commands:
   adhoc       Run dnsloader in adhoc mode
@@ -43,7 +38,7 @@ Flags:
 
 ```shell
 Usage:
-  dnsloader adhoc [flags]
+  dns-loader adhoc [flags]
 
 Flags:
   -d, --domain string      domain name
@@ -62,36 +57,52 @@ Flags:
 下面通过adhoc命令向baidu.com发送随机五个字符长度的域名比如```abcde.baidu.com```， QPS=100, 域名服务器地址为8.8.8.8。
 
 ```
-dnsload adhoc -d baidu.com -Q 100 -s 8.8.8.8
-
-2017/11/15 20:58:04 new dns loader client success, start send packet...
-2017/11/15 20:58:04 Start generate dns packet
-2017/11/15 20:58:04 init dns loader client configuration success
-...
-[===>                ] 
-...
-2017/11/15 20:59:04 [Result]total packets sum:60001
-2017/11/15 20:59:04 [Result]runing time 1m0s
-2017/11/15 20:59:04 [Result]status nxdomain:60001 [100.00%]
-
+./dns-loader adhoc -d test -s 127.0.0.1 -Q 100000
+INFO[0000] new dns loader client success
+INFO[0000] dns packet info :[domain=test,length=5,type=1]
+INFO[0000] config the dns loader success
+INFO[0000] dnsloader server info : server:127.0.0.1|port:53
+INFO[0000] initialize load gernerator[qps=100000, durations=1m0s,timeout=1s]
+INFO[0000] checking the parameters
+INFO[0000] check the parameters success. (timeout=1s, qps=100000, duration=1m0s)
+INFO[0000] starting dns loader generator
+INFO[0000] setting throttle 10µs
+INFO[0000] create new thread to receive dns data from server
+INFO[0000] start push packets to dns server and will stop at 1m0s later...
+INFO[0060] prepare to stop load test [context deadline exceeded]
+INFO[0060] doing calculation work
+INFO[0060] total packets sum:2617542                     result=true
+INFO[0060] runing time 1m0.000113166s                    result=true
+INFO[0060] status Success:21627 [0.83]                   result=true
+INFO[0060] status unknown:2595915 [99.17]                result=true
+INFO[0060] stop success!
 
 ```
 #### 1.2  master模式
 
-该模式下需要指定模式类型为`master`和配置文件，运行后通过web浏览器来管理发包请求，默认登入用户名和密码为admin/admin,登入配置发包类型和模式后点击开始即可，该模式下可以添加agent，只需要agent端运行agent模式即可（见1.3）
+该模式下需要指定模式类型为`master`和对应的配置文件，运行后通过web浏览器来管理发包请求，默认登入用户名和密码为admin/admin,登入配置发包类型和模式后点击开始即可，该模式下可以添加agent，只需要agent端运行agent模式即可。
+```
+Usage:
+  dns-loader master [flags]
+
+Flags:
+      --config string   config file (default is $HOME/config.ini)
+  -h, --help            help for master
 ```
 
-```
 启动后访问：http://localhost:9889
 
 #### 1.3  agent模式
 
 该模式需要指定模式类型为`agent`和配置文件，可放入后台运行，该模式不会开启任何的web页面，但是会提供http接口供master服务器端调用
 ```
-go run dns-loader.go -t agent -c config.ini 
-2017/11/15 21:15:12 load configuration from file:config.ini
-2017/11/15 21:15:12 start agent server listen on 8998 for master connect
-2017/11/15 21:15:12 agent server route init success
-...
+Run dns-loader in agent mode, receive job from master and gen dns packets
+
+Usage:
+  dns-loader agent [flags]
+
+Flags:
+      --config string   config file (default is $HOME/config.ini) (default "-c")
+  -h, --help            help for agent
 ```
 
