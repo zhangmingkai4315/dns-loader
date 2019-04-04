@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/zhangmingkai4315/dns-loader/dns"
+
 	"github.com/briandowns/spinner"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
@@ -34,7 +36,7 @@ type myDNSLoaderGenerator struct {
 }
 
 func (mlg *myDNSLoaderGenerator) Start() bool {
-	log.Println("starting Loader...")
+	log.Info("starting dns loader generator")
 	mlg.ctx, mlg.cancelFunc = context.WithTimeout(context.Background(), mlg.duration)
 	mlg.callCount = 0
 	currentStatus := mlg.Status()
@@ -45,13 +47,12 @@ func (mlg *myDNSLoaderGenerator) Start() bool {
 	globalStatus = STATUS_STARTING
 	if mlg.qps > 0 {
 		interval := time.Duration(1e9 / mlg.qps)
-		log.Printf("setting throttle %v", interval)
+		log.Infof("setting throttle %v", interval)
 	}
 	atomic.StoreUint32(&mlg.status, STATUS_RUNNING)
 	globalStatus = STATUS_RUNNING
-	log.Println("new goroutine to generating dns packets")
 	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
-	log.Println("new goroutine to receive dns data from server")
+	log.Infoln("create new thread to receive dns data from server")
 	go func() {
 		// recive data from connections
 		b := make([]byte, 4)
@@ -78,22 +79,25 @@ func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
 	log.Printf("prepare to stop load test [%s]", err)
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPING)
 	globalStatus = STATUS_STOPPING
-	log.Println("try to stop channel...")
-	log.Println("doing calculation work")
+	log.Infoln("doing calculation work")
 	runningTime := time.Since(mlg.startTime)
-	time.Sleep(1 * time.Second)
-	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", mlg.CallCount())
+	managerCounter := mlg.CallCount()
+	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", managerCounter)
 	log.WithFields(log.Fields{"result": true}).Infof("runing time %v", runningTime)
 	var counter uint64
 	for k, v := range mlg.result {
 		counter = v + counter
-		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
+		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", dns.DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
 	}
-	restUnknown := mlg.CallCount() - counter
-	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", restUnknown, float64(restUnknown*100)/float64(mlg.CallCount()))
+	log.Println(mlg.CallCount(), counter)
+	var unknown uint64
+	if managerCounter > counter {
+		unknown = managerCounter - counter
+	}
+	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", unknown, float64(unknown*100)/float64(mlg.CallCount()))
 	atomic.StoreUint32(&mlg.status, STATUS_STOPPED)
 	globalStatus = STATUS_STOPPED
-	log.Println("stop success!")
+	log.Info("stop success!")
 }
 
 func (mlg *myDNSLoaderGenerator) sendNewRequest() {
@@ -166,7 +170,6 @@ func (mlg *myDNSLoaderGenerator) CallCount() uint64 {
 // NewDNSLoaderGenerator will return a new instance of generator
 // using param from GeneratorParam
 func NewDNSLoaderGenerator(param GeneratorParam) (Generator, error) {
-	log.Println("New Load Generator")
 	if err := param.ValidCheck(); err != nil {
 		return nil, err
 	}
@@ -178,7 +181,6 @@ func NewDNSLoaderGenerator(param GeneratorParam) (Generator, error) {
 		status:   STATUS_STOPPED,
 	}
 	mlg.result = make(map[uint8]uint64)
-	log.Printf("initial Process Done QPS[%d]", mlg.qps)
 	return mlg, nil
 }
 
@@ -189,8 +191,8 @@ func GenTrafficFromConfig(config *Configuration) {
 	if err != nil {
 		log.Panicf("%s", err.Error())
 	}
-	log.Println("config the dns loader success")
-	log.Printf("current configuration for dns loader is server:%s|port:%d",
+	log.Infoln("config the dns loader success")
+	log.Infof("dnsloader server info : server:%s|port:%d",
 		dnsclient.Config.Server, dnsclient.Config.Port)
 	param := GeneratorParam{
 		Caller:   dnsclient,
@@ -198,12 +200,11 @@ func GenTrafficFromConfig(config *Configuration) {
 		QPS:      uint32(config.QPS),
 		Duration: time.Second * time.Duration(config.Duration),
 	}
-	log.Printf("initialize load %+v", param)
+	log.Infof("initialize load %s", param.Info())
 	gen, err := NewDNSLoaderGenerator(param)
 	if err != nil {
 		log.Panicf("load generator initialization fail :%s", err)
 	}
-	log.Println("start load generator")
 	GloablGenerator = gen
 	gen.Start()
 }

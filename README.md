@@ -17,30 +17,52 @@ docker run -d named-root
 
 #### 1.1 参数说明
 
+程序运行通过命令模式执行，执行程序二进制后，有多个模式可供选择，分别是adhoc, master和agent模式.
 
+```shell
+Usage:
+  dnsloader [flags]
+  dnsloader [command]
+
+Available Commands:
+  adhoc       Run dnsloader in adhoc mode
+  agent       Run dnsloader in agent mode
+  help        Help about any command
+  master      Run dnsloader in master mode
+  version     Print version of dnsloader
+
+Flags:
+  -h, --help   help for dnsloader
 ```
-Usage: dns-loader [options...] 
-Options:
-  -t       loader type, one of "master","worker","once"
-  -c       config file path for app start
-  -s       dns server
-  -p       dns server listen port. Default is 53.
-  -d       query domain name
-  -D       duration time. Default 60 seconds
-  -q       query per second. Default is 10
-  -r       random subdomain length. Default is 5
-  -R       enable random query type. Default is false
-  -Q       query type. Default is A
-  -debug   enable debug mode
-```
 
 
-#### 1.1  单次执行模式
+#### 1.1  adhoc模式
  
-该模式下无需指定配置文件和发包模式，所有的配置通过命令行来输入，仅仅执行一次发包，单机模式，如需要中断直接运行ctrl+C即可退出。
+该模式下无需指定配置文件, 所有的配置通过命令行来输入，仅仅执行一次发包，单机模式，如需要中断直接运行ctrl+C即可退出。支持的命令如下：
+
+
+```shell
+Usage:
+  dnsloader adhoc [flags]
+
+Flags:
+  -d, --domain string      domain name
+  -D, --duration int       send out dns traffic duration (default 60)
+  -h, --help               help for adhoc
+  -p, --port int           dns server port (default 53)
+  -Q, --qps int            qps for dns traffic (default 100)
+  -q, --querytype string   random dns query type (default "A")
+  -r, --random int         prefix random subdomain length (default 5)
+  -R, --randomtype         random dns query type
+  -s, --server string      dns server ip
+```
+
+**实例** 
+
+下面通过adhoc命令向baidu.com发送随机五个字符长度的域名比如```abcde.baidu.com```， QPS=100, 域名服务器地址为8.8.8.8。
 
 ```
-go run dns-loader.go -s 172.17.0.2 -d jsmean.com -Q A -D 60 -q 1000 -r 5
+dnsload adhoc -d baidu.com -Q 100 -s 8.8.8.8
 
 2017/11/15 20:58:04 new dns loader client success, start send packet...
 2017/11/15 20:58:04 Start generate dns packet
@@ -58,12 +80,7 @@ go run dns-loader.go -s 172.17.0.2 -d jsmean.com -Q A -D 60 -q 1000 -r 5
 
 该模式下需要指定模式类型为`master`和配置文件，运行后通过web浏览器来管理发包请求，默认登入用户名和密码为admin/admin,登入配置发包类型和模式后点击开始即可，该模式下可以添加agent，只需要agent端运行agent模式即可（见1.3）
 ```
-go run dns-loader.go -t master -c config.ini 
-2017/11/15 21:11:46 load configuration from file:config.ini
-2017/11/15 21:11:46 start Web for control panel default web address:localhost:9889
-2017/11/15 21:11:46 http server route init success
-2017/11/15 21:11:46 static file folder:/web/assets
-...
+
 ```
 启动后访问：http://localhost:9889
 
@@ -77,25 +94,4 @@ go run dns-loader.go -t agent -c config.ini
 2017/11/15 21:15:12 agent server route init success
 ...
 ```
-
-### 2 性能优化
-
-##### 函数性能
-
-使用原生库来展示调用栈
-
-```
-go tool pprof -seconds=5 localhost:8080/debug/pprof/profile
-> web
-```
-
-使用uber的库来展示调用栈
-```
-go get github.com/uber/go-torch
-git clone https://github.com/brendangregg/FlameGraph.git
-go-torch -t 5
-firefox torch.svg
-
-```
-
 

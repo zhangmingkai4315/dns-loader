@@ -1,8 +1,6 @@
 package dnsloader
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -52,32 +50,32 @@ type GeneratorParam struct {
 	Duration time.Duration
 }
 
+// Info return the basic info of gernerator params
+func (param *GeneratorParam) Info() string {
+	return fmt.Sprintf("gernerator[qps=%d, durations=%v,timeout=%v]", param.QPS, param.Duration, param.Timeout)
+}
+
 //ValidCheck function
 func (param *GeneratorParam) ValidCheck() error {
 	var errMsgs []string
 	if param.Caller == nil {
-		errMsgs = append(errMsgs, "Invalid caller!")
+		errMsgs = append(errMsgs, "invalid caller!")
 	}
 	if param.Timeout == 0 {
-		errMsgs = append(errMsgs, "Invalid timeout!")
+		errMsgs = append(errMsgs, "invalid timeout!")
 	}
 	if param.QPS < 0 {
-		errMsgs = append(errMsgs, "Invalid qps(query per second)!")
+		errMsgs = append(errMsgs, "invalid qps (dns query per second)!")
 	}
 	if param.Duration == 0 {
-		errMsgs = append(errMsgs, "Invalid duration!")
+		errMsgs = append(errMsgs, "invalid duration!")
 	}
-	var buf bytes.Buffer
-	buf.WriteString("Checking the parameters...")
+	log.Infoln("checking the parameters")
 	if errMsgs != nil {
 		errMsg := strings.Join(errMsgs, " ")
-		buf.WriteString(fmt.Sprintf("NOT passed! (%s)\n", errMsg))
-		log.Panic(buf.String())
-		return errors.New(errMsg)
+		log.Panicf("check the parameters not passed: %s", errMsg)
 	}
-	buf.WriteString(
-		fmt.Sprintf("Passed. (timeout=%s, qps=%d, duration=%s)",
-			param.Timeout, param.QPS, param.Duration))
-	log.Println(buf.String())
+	log.Infof("check the parameters success. (timeout=%s, qps=%d, duration=%s)",
+		param.Timeout, param.QPS, param.Duration)
 	return nil
 }

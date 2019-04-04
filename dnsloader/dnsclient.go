@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/zhangmingkai4315/go-dns-shooter/dns"
+	"github.com/zhangmingkai4315/dns-loader/dns"
 )
 
 // DNSClient 定义dnsloader发包的配置数据
@@ -25,7 +25,7 @@ func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err er
 		return nil, err
 	}
 	dnsclient.Conn = conn
-	log.Println("new dns loader client success, start send packet...")
+	log.Println("new dns loader client success")
 	dnsclient.InitPacket()
 	return dnsclient, nil
 }
@@ -37,14 +37,13 @@ func (client *DNSClient) InitPacket() {
 	if client.Config.QueryTypeFixed == true {
 		client.packet.InitialPacket(client.Config.Domain,
 			client.Config.DomainRandomLength,
-			GetDNSTypeCodeFromString(client.Config.QueryType))
+			dns.GetDNSTypeCodeFromString(client.Config.QueryType))
 	} else {
 		client.packet.InitialPacket(client.Config.Domain,
 			client.Config.DomainRandomLength,
 			dns.TypeA)
 		client.packet.RandomType = true
 	}
-	log.Println("init dns loader client configuration success")
 }
 
 // BuildReq build new dns request for use later

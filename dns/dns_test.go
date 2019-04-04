@@ -18,7 +18,6 @@ func TestSetQuestion(t *testing.T) {
 	if packet.Question[0].Qtype != TypeA {
 		t.Errorf("%v: expected, Got %v", TypeA, packet.Question[0].Qtype)
 	}
-
 }
 
 func TestToBytes(t *testing.T) {

@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // DNSHeader holds a DNS Header.
@@ -90,22 +91,6 @@ func (question *Question) pack(msg []byte, offset int, rawpack []byte) (int, err
 	}
 	return offset, nil
 }
-
-// RR is a interface for any dns resource record.
-// type RR interface {
-// 	Header() *RRHeader
-// 	String() string
-// 	pack([]byte, int, map[string]int, bool) (int, error)
-// }
-
-// RRHeader is the header of dns record.
-// type RRHeader struct {
-// 	Name         string
-// 	RRType       uint16
-// 	Class        uint16
-// 	TTL          uint32
-// 	RRDataLength uint16
-// }
 
 // DNSPacket holds a DNS packet
 type DNSPacket struct {
@@ -333,7 +318,7 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 
 // InitialPacket initial the basic setup
 func (dns *DNSPacket) InitialPacket(domain string, length int, queryType uint16) {
-	log.Printf("Start generate dns packet:[domain=%s,length=%d,type=%d]", domain, length, queryType)
+	log.Infof("dns packet info :[domain=%s,length=%d,type=%d]", domain, length, queryType)
 	dns.SetQuestion(FqdnFormat(GenRandomDomain(length, domain)), queryType)
 	dns.ToBytes()
 	dns.RandomLength = length

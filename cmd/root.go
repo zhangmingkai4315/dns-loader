@@ -19,7 +19,7 @@ Description: dnsloader is a fast and flexible dns packets generator build with g
 
 func init() {
 	rootCmd.AddCommand(masterCmd)
-	rootCmd.AddCommand(slaveCmd)
+	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(adhocCmd)
 	rootCmd.AddCommand(versionCmd)
 }
