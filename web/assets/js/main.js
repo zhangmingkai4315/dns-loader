@@ -1,3 +1,8 @@
+var globalJobInfo = {
+    id: null,
+    status: null,
+}
+
 /**
  * getFormData serial data from form
  * @param {object} form - The jquery form object 
@@ -19,20 +24,19 @@ function getFormData($form) {
  * @returns {object} result - the serialized javascript object
  */
 function validateConfig(result) {
-
-    if (result["server"] == "") {
-        toastr.error('DNS server is empty', 'Config Error')
+    if (result["server"] === "") {
+        $("input[name=server]").addClass("error-input")
+        toastr.error('dns server is empty', 'Config Error')
         return false
     }
-
-    if (result["domain"] == "") {
+    if (result["domain"] === "") {
         result["domain"] = "."
     }
-    if (result["query_type"] == "") {
-        result["query_type"] = "A"
+    var port = parseInt(result["port"])
+    if(isNaN(port)){
+        result["port"] = "53"
     }
-    result["port"] = isNaN(parseInt(result["port"])) ? 53 : parseInt(result["port"])
-    if (result["port"] <= 0 || result["port"] > 65535) {
+    if (port <= 0 || port > 65535) {
         toastr.error('Port number should be in [0-65535]', 'Port Error')
         return false
     }
@@ -47,10 +51,8 @@ function validateConfig(result) {
         toastr.error('Random length number should not smaller than 0', 'Length Error')
         return false
     }
-    result["duration"] = isNaN(parseInt(result["duration"])) ? 60 : parseInt(result["duration"])
-    if (result["duration"] <= 0) {
-        toastr.error('Duration time should be larger than 0', 'Duration Time Error')
-        return false
+    if (result["duration"] === "") {
+        result["duration"] = "60s"
     }
     return true
 }
@@ -183,28 +185,19 @@ var logger = new Logger("console-info")
 
 
 $(document).ready(function () {
-    $(".btn-fixed-select").on("click", function () {
-        $(".btn-fixed-select").removeClass("active")
-        $(this).addClass("active")
-    });
-
     $(".config-submit").click(function () {
-        // serial data
         var result = getFormData($('form[name="config"]'))
-        var fixedType = $(".btn-fixed-select.active").attr("data-value") === "true" ? true : false
-        // validate data
-        // sende data
-        result['query_type_fixed'] = fixedType
         if (validateConfig(result) === false) {
             return
         }
-
         $.ajax({
             type: "POST",
             url: "/start",
             data: JSON.stringify(result),
             success: function (data) {
+                var jsonObj = data.responseJSON
                 $('.master-running').removeClass("hide")
+                globalJobInfo.id = jsonObj["id"]
             },
             error: function (data) {
                 var jsonObj = data.responseJSON

@@ -96,35 +96,34 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	status := core.GetGlobalStatus()
-	if status != core.STATUS_STOPPED && status != core.STATUS_INIT {
+	config := core.GetGlobalConfig()
+	if config.Status != core.StatusStopped {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
 		return
 	}
-	//
-	var config core.Configuration
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&config)
 	if err != nil {
+		log.Errorf("decode configuration info fail: %s", err.Error())
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode config fail"})
 		return
 	}
-	// localTraffic
-	err = config.Valid()
+
+	err = config.ValidateConfiguration()
 	if err != nil {
 		log.Println(err)
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
 		return
 	}
-	go core.GenTrafficFromConfig(&config)
+	go core.GenTrafficFromConfig(config)
 	go nodeManager.Call(Start, config)
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+	r.JSON(w, http.StatusOK, map[string]string{"id": config.ID, "status": "success"})
 
 }
 
 func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	if core.GloablGenerator == nil || core.GloablGenerator.Status() != core.STATUS_RUNNING {
+	if core.GloablGenerator == nil || core.GloablGenerator.Status() != core.StatusRunning {
 		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "Not Running"})
 		return
 	}
@@ -136,23 +135,33 @@ func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
+type StatusResponse struct {
+	CurrentMessages []Message `json:"messages"`
+	ID              string    `json:"id"`
+	Status          string    `json:"status"`
+	Error           string    `json:"error"`
+}
+
 func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
+	config := core.GetGlobalConfig()
 	r := render.New(render.Options{})
-	if MessagesHub.Len() <= 0 {
-		r.JSON(w, http.StatusOK, map[string]string{"status": "no update"})
-		return
-	}
 	data, err := MessagesHub.Get()
 	if err != nil {
-		r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
+		r.JSON(w, http.StatusServiceUnavailable, StatusResponse{Error: err.Error()})
 	}
-	var messages []Message
-	err = json.Unmarshal(data, &messages)
-	if err != nil {
-		r.JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
-		return
+	messages := []Message{}
+	if len(data) != 0 {
+		err = json.Unmarshal(data, &messages)
+		if err != nil {
+			r.JSON(w, http.StatusServiceUnavailable, StatusResponse{Error: err.Error()})
+			return
+		}
 	}
-	r.JSON(w, http.StatusOK, map[string][]Message{"data": messages})
+	r.JSON(w, http.StatusOK, StatusResponse{
+		CurrentMessages: messages,
+		ID:              config.ID,
+		Status:          config.GetCurrentJobStatusString(),
+	})
 }
 
 func login(config *core.Configuration) func(w http.ResponseWriter, req *http.Request) {

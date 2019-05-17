@@ -51,11 +51,11 @@ func NewNodeManager(c *core.Configuration) *NodeManager {
 }
 
 // AddNode append a new ip to this node list
-func (manager *NodeManager) AddNode(ip string, port int) error {
-	if port == 0 {
+func (manager *NodeManager) AddNode(ip string, port string) error {
+	if port == "" {
 		port = manager.config.AgentPort
 	}
-	ip = fmt.Sprintf("%s:%d", ip, port)
+	ip = fmt.Sprintf("%s:%s", ip, port)
 	log.Printf("send ping request to node:%s", ip)
 	err := manager.callPing(ip)
 	if err != nil {

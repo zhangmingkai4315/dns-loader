@@ -13,10 +13,10 @@ var agentCmd = &cobra.Command{
 	Long:  `Run dnsloader in agent mode, receive job from master and gen dns packets`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := initConfig(agentConfigFile)
-		if config.AgentPort == 0 || config.ControlMaster == "" {
+		if config.AgentPort == "" || config.Master == "" {
 			log.Fatalln("agent port and master ip must given")
 		}
-		log.Printf("start agent server listen on %d for master:%s connect", config.AgentPort, config.ControlMaster)
+		log.Printf("start agent server listen on %s for master:%s connect", config.AgentPort, config.Master)
 		web.NewAgentServer(config)
 		return
 	},

@@ -1,12 +1,6 @@
 # dns-loader
 go语言实现的dns负载测试工具
 
-### 开发环境
-
-如需开发，可以启动一个权威DNS服务器用于测试使用, 权威配置文件在docker目录中conf文件夹下
-```
-docker-compose up
-```
 
 ### 1 启动程序
 
@@ -42,13 +36,12 @@ Usage:
 
 Flags:
   -d, --domain string      domain name
-  -D, --duration int       send out dns traffic duration (default 60)
+  -D, --duration int       duration for send dns traffic (default 60s)
   -h, --help               help for adhoc
   -p, --port int           dns server port (default 53)
   -Q, --qps int            qps for dns traffic (default 100)
-  -q, --querytype string   random dns query type (default "A")
+  -q, --querytype string   random dns query type (default "" random query type)
   -r, --random int         prefix random subdomain length (default 5)
-  -R, --randomtype         random dns query type
   -s, --server string      dns server ip
 ```
 
@@ -106,3 +99,9 @@ Flags:
   -h, --help            help for agent
 ```
 
+### 开发环境
+
+如需开发，可以启动一个权威DNS服务器用于测试使用, 权威配置文件在docker目录中conf文件夹下
+```
+docker-compose up
+```

@@ -6,25 +6,29 @@ import (
 	"sync"
 )
 
+// Message define one single event message
 type Message struct {
 	Level  string `json:"level"`
 	Time   string `json:"time"`
 	Msg    string `json:"msg"`
 	Result bool   `json:"result"`
 }
+
+// GlobalMessages define the Messages Manager
 type GlobalMessages struct {
 	locker  sync.RWMutex
 	MaxSize int
 	Events  []Message `json:"events"`
 }
 
+// MessagesHub for global message hub
 var MessagesHub *GlobalMessages
 
 func init() {
-	// events := make([]Message, 0)
 	MessagesHub = NewGloabalMessages(50)
 }
 
+// Len return current message length
 func (g *GlobalMessages) Len() int {
 	g.locker.RLock()
 	defer g.locker.RUnlock()
@@ -45,9 +49,13 @@ func (g *GlobalMessages) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// Get get current message and delete it from messages manager
 func (g *GlobalMessages) Get() ([]byte, error) {
 	g.locker.Lock()
 	defer g.locker.Unlock()
+	if len(g.Events) == 0 {
+		return []byte{}, nil
+	}
 	result, err := json.Marshal(g.Events)
 	if err != nil {
 		return nil, err
@@ -56,6 +64,7 @@ func (g *GlobalMessages) Get() ([]byte, error) {
 	return result, nil
 }
 
+// NewGloabalMessages create a new messages manager
 func NewGloabalMessages(max int) *GlobalMessages {
 	events := make([]Message, 0)
 	return &GlobalMessages{

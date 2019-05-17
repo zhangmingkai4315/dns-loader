@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -9,25 +10,23 @@ import (
 )
 
 var (
-	duration   int
-	qps        int
-	domain     string
-	server     string
-	port       int
-	random     int
-	randomType bool
-	querytype  string
+	duration  time.Duration
+	qps       int
+	domain    string
+	server    string
+	port      string
+	random    int
+	querytype string
 )
 
 func init() {
-	adhocCmd.PersistentFlags().IntVarP(&duration, "duration", "D", 60, "send out dns traffic duration")
+	adhocCmd.PersistentFlags().DurationVarP(&duration, "duration", "D", time.Second*60, "send out dns traffic duration")
 	adhocCmd.PersistentFlags().IntVarP(&qps, "qps", "Q", 100, "qps for dns traffic")
 	adhocCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "", "domain name")
 	adhocCmd.PersistentFlags().StringVarP(&server, "server", "s", "", "dns server ip")
-	adhocCmd.PersistentFlags().IntVarP(&port, "port", "p", 53, "dns server port")
+	adhocCmd.PersistentFlags().StringVarP(&port, "port", "p", "53", "dns server port")
 	adhocCmd.PersistentFlags().IntVarP(&random, "random", "r", 5, "prefix random subdomain length")
-	adhocCmd.PersistentFlags().BoolVarP(&randomType, "randomtype", "R", false, "random dns query type")
-	adhocCmd.PersistentFlags().StringVarP(&querytype, "querytype", "q", "A", "random dns query type")
+	adhocCmd.PersistentFlags().StringVarP(&querytype, "querytype", "q", "", "random dns query type empty is random type")
 }
 
 var adhocCmd = &cobra.Command{
@@ -40,12 +39,11 @@ var adhocCmd = &cobra.Command{
 		config.Domain = domain
 		config.DomainRandomLength = random
 		config.QPS = qps
-		config.Duration = duration
-		config.QueryTypeFixed = randomType
+		config.Duration = core.CustomDuration{Duration: duration}
 		config.Server = server
 		config.Port = port
 		config.QueryType = querytype
-		if err := config.Valid(); err != nil {
+		if err := config.ValidateConfiguration(); err != nil {
 			log.Panicf("argument validation error:%s", err)
 		}
 		core.GenTrafficFromConfig(config)

@@ -3,47 +3,54 @@ package core
 import (
 	// "bytes"
 	"net"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/zhangmingkai4315/dns-loader/dns"
 )
 
-// DNSClient 定义dnsloader发包的配置数据
+// DNSClient hold the loader configuration setting and connection
 type DNSClient struct {
 	packet *dns.DNSPacket
 	Config *Configuration
 	Conn   net.Conn
 }
 
-// NewDNSClientWithConfig 使用传递的配置参数进行初始化
+// NewDNSClientWithConfig create a new DNSClient instance
 func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err error) {
 	dnsclient = &DNSClient{Config: config}
-	conn, err := net.Dial("udp", config.Server+":"+strconv.Itoa(config.Port))
+	conn, err := net.Dial("udp", config.Server+":"+config.Port)
 	if err != nil {
 		return nil, err
 	}
 	dnsclient.Conn = conn
 	log.Println("new dns loader client success")
-	dnsclient.InitPacket()
+	err = dnsclient.InitPacket()
+	if err != nil {
+		return nil, err
+	}
 	return dnsclient, nil
 }
 
 // InitPacket init a packet for dns query data
-func (client *DNSClient) InitPacket() {
+func (client *DNSClient) InitPacket() error {
 	client.packet = new(dns.DNSPacket)
 	// client.packet.InitialPacket(domain, randomlen, dns.TypeA)
-	if client.Config.QueryTypeFixed == true {
+	if client.Config.QueryType != "" {
+		queryTypeCode, err := dns.GetDNSTypeCodeFromString(client.Config.QueryType)
+		if err != nil {
+			log.Errorf("init packet fail: %s", err.Error())
+			return err
+		}
 		client.packet.InitialPacket(client.Config.Domain,
-			client.Config.DomainRandomLength,
-			dns.GetDNSTypeCodeFromString(client.Config.QueryType))
-	} else {
-		client.packet.InitialPacket(client.Config.Domain,
-			client.Config.DomainRandomLength,
-			dns.TypeA)
-		client.packet.RandomType = true
+			client.Config.DomainRandomLength, queryTypeCode)
+		return nil
 	}
+	client.packet.InitialPacket(client.Config.Domain,
+		client.Config.DomainRandomLength,
+		dns.TypeA)
+	client.packet.RandomType = true
+	return nil
 }
 
 // BuildReq build new dns request for use later

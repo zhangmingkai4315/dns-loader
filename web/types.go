@@ -32,14 +32,14 @@ const (
 // IPWithPort define the posted node info
 type IPWithPort struct {
 	IPAddress string `json:"ipaddress"`
-	Port      int    `json:"port"`
+	Port      string `json:"port"`
 }
 
-func (ipp *IPWithPort) toString(defaultPort int) string {
-	if ipp.Port == 0 {
+func (ipp *IPWithPort) toString(defaultPort string) string {
+	if ipp.Port == "" {
 		ipp.Port = defaultPort
 	}
-	return fmt.Sprintf("%s:%d", ipp.IPAddress, ipp.Port)
+	return fmt.Sprintf("%s:%s", ipp.IPAddress, ipp.Port)
 }
 
 // RPCCall define the message send to node

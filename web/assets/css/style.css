@@ -55,6 +55,11 @@ body {
     font-weight: bold;
 }
 
+
+.error-input{
+    border: 1px dotted red;
+}
+
 .theme-modal {
     background: #2e2e2e;
     color: #7B7B7B;
@@ -69,7 +74,7 @@ body {
     margin-right: .25rem;
     border: 1px solid transparent;
     border-radius: .1rem 0 0 .1rem;
-    color: #7b7b7a
+    color: white;
 }
 
 .theme-input {

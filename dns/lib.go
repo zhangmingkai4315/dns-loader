@@ -4,6 +4,7 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"math/rand"
 	"strings"
 	"sync"
@@ -151,11 +152,11 @@ func GetDetailInfo(code ReturnCode) string {
 }
 
 // GetDNSTypeCodeFromString return the true code of dns type
-func GetDNSTypeCodeFromString(typeString string) uint16 {
+func GetDNSTypeCodeFromString(typeString string) (uint16, error) {
 	queryString := strings.ToUpper(typeString)
 	code, ok := DNSType[queryString]
 	if ok {
-		return code
+		return code, nil
 	}
-	return 0
+	return 0, errors.New("not support query type")
 }

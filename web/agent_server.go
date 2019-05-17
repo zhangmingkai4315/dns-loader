@@ -42,9 +42,8 @@ func ping(w http.ResponseWriter, req *http.Request) {
 func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
-	// 判断是否有在工作的发包程序
-	status := core.GetGlobalStatus()
-	if status != core.STATUS_STOPPED && status != core.STATUS_INIT {
+	status := core.GetGlobalConfig().GetCurrentJobStatus()
+	if status != core.StatusStopped && status != core.StatusInit {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
 		return
 	}
@@ -55,7 +54,7 @@ func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// localTraffic
-	err = config.Valid()
+	err = config.ValidateConfiguration()
 	if err != nil {
 		log.Println(err)
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
@@ -64,7 +63,6 @@ func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
 	log.Printf("receive new job id:%s\n", config.ID)
 	go core.GenTrafficFromConfig(&config)
 	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
-
 }
 
 func killAgentTraffic(w http.ResponseWriter, req *http.Request) {
