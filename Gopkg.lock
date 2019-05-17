@@ -2,92 +2,125 @@
 
 
 [[projects]]
+  digest = "1:331046c28e2c41deb6c9f9e10a837b47b3fc4895e15827b2792b10a2603a17ce"
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
+  pruneopts = ""
   revision = "521b25f4b05fd26bec69d9dedeb8f9c9a83939a8"
   version = "v8"
 
 [[projects]]
-  name = "github.com/briandowns/spinner"
-  packages = ["."]
-  revision = "48dbb65d7bd5c74ab50d53d04c949f20e3d14944"
-  version = "1.0"
-
-[[projects]]
-  name = "github.com/fatih/color"
-  packages = ["."]
-  revision = "1b35f289c47d5c73c398cea8e006b7bcb6234a96"
-  version = "v0.1"
-
-[[projects]]
+  digest = "1:20ed7daa9b3b38b6d1d39b48ab3fd31122be5419461470d0c28de3e121c93ecf"
   name = "github.com/gorilla/context"
   packages = ["."]
+  pruneopts = ""
   revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:74f252b12d195c61ef5e54a4e2ab677af765d9e4b68b42c8c64fd16a4502a0c8"
   name = "github.com/gorilla/mux"
   packages = ["."]
+  pruneopts = ""
   revision = "24fca303ac6da784b9e8269f724ddeb0b2eea5e7"
   version = "v1.5.0"
 
 [[projects]]
+  digest = "1:1ff3509899d1357b533eefcc4be703aa4b8b690370de9bce65389aad226acf3c"
   name = "github.com/gorilla/securecookie"
   packages = ["."]
+  pruneopts = ""
   revision = "667fe4e3466a040b780561fe9b51a83a3753eefc"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:bfb5530b06be15a20de32e6c946eddc2d81693980c79205bcda3bd37fe1a931c"
   name = "github.com/gorilla/sessions"
   packages = ["."]
+  pruneopts = ""
   revision = "ca9ada44574153444b00d3fd9c8559e4cc95f896"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
+  digest = "1:55c48c9cfdf8bab6f4911f621616fbe223c0b72a6df9aab6b172ab7e5cfc6bd2"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
+  pruneopts = ""
   revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/shiena/ansicolor"
-  packages = ["."]
-  revision = "a422bbe96644373c5753384a59d678f7d261ff10"
-
-[[projects]]
+  digest = "1:32d34177096503a2b24d5533fcf9f1ca76324fb5ab566d44b45ee0c0ff3f0f0d"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
+  pruneopts = ""
   revision = "418b41d23a1bf978c06faea5313ba194650ac088"
   version = "v0.8.7"
 
 [[projects]]
+  digest = "1:a1403cc8a94b8d7956ee5e9694badef0e7b051af289caad1cf668331e3ffa4f6"
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
+  version = "v0.0.3"
+
+[[projects]]
+  digest = "1:cbaf13cdbfef0e4734ed8a7504f57fe893d471d62a35b982bf6fb3f036449a66"
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  pruneopts = ""
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
+
+[[projects]]
   branch = "master"
+  digest = "1:90bbd225f6aaeaebdb9912c68176548900c24b795fe0841bafa7089d180dbd91"
   name = "github.com/unrolled/render"
   packages = ["."]
+  pruneopts = ""
   revision = "65450fb6b2d3595beca39f969c411db8f8d5c806"
 
 [[projects]]
   branch = "master"
-  name = "github.com/zhangmingkai4315/go-dns-shooter"
-  packages = ["dns"]
-  revision = "208a27d044dbe521b0f31f2ffeb9247d5027703b"
-
-[[projects]]
-  branch = "master"
+  digest = "1:0d06c0dd6a462a341911b4a83998434e078dafa821ba6d6c84f8c8e03b91d9fa"
   name = "go.uber.org/ratelimit"
-  packages = [".","internal/clock"]
+  packages = [
+    ".",
+    "internal/clock",
+  ]
+  pruneopts = ""
   revision = "d15fa2e2a63dd52104bc96d8ea7dc47ce8027de8"
 
 [[projects]]
+  digest = "1:1f557d2b7814235704f63f15e5bd3d7a5d3be9d3f9e7bf74b411150df89886e6"
   name = "gopkg.in/ini.v1"
   packages = ["."]
+  pruneopts = ""
   revision = "f280b3ba517bf5fc98922624f21fb0e7a92adaec"
   version = "v1.30.3"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a078088c298903cbfbf2360e50b0fde7b7cd47fe26fe9af6c6abfd130fe009e0"
+  input-imports = [
+    "github.com/asaskevich/govalidator",
+    "github.com/gorilla/mux",
+    "github.com/gorilla/sessions",
+    "github.com/nu7hatch/gouuid",
+    "github.com/sirupsen/logrus",
+    "github.com/spf13/cobra",
+    "github.com/unrolled/render",
+    "go.uber.org/ratelimit",
+    "gopkg.in/ini.v1",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

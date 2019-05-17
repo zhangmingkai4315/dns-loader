@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
 	"github.com/zhangmingkai4315/dns-loader/core"
 )
 
