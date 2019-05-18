@@ -18,10 +18,11 @@ var nodeManager *NodeManager
 
 // JSONResponse the response to front end
 type JSONResponse struct {
-	CurrentMessages []Message `json:"messages"`
-	ID              string    `json:"id"`
-	Status          string    `json:"status"`
-	Error           string    `json:"error"`
+	CurrentMessages []Message  `json:"messages"`
+	ID              string     `json:"id"`
+	Status          string     `json:"status"`
+	Error           string     `json:"error"`
+	NodeInfos       []NodeInfo `json:"nodes"`
 }
 
 func auth(f func(w http.ResponseWriter, req *http.Request)) func(w http.ResponseWriter, req *http.Request) {
@@ -82,6 +83,7 @@ func index(w http.ResponseWriter, req *http.Request) {
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	config := core.GetGlobalConfig()
+	log.Info("receive new query job")
 	if config.Status != core.StatusStopped {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error:  "job is already started",
@@ -108,7 +110,9 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	go core.GenTrafficFromConfig(config)
-	go nodeManager.Call(Start, config)
+	if config.IsMaster == true {
+		go nodeManager.Call(Start, config)
+	}
 	r.JSON(w, http.StatusOK, JSONResponse{
 		ID:     config.ID,
 		Status: config.GetCurrentJobStatusString(),
@@ -130,7 +134,9 @@ func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
-	nodeManager.Call(Kill, nil)
+	if config.IsMaster == true {
+		go nodeManager.Call(Kill, nil)
+	}
 	r.JSON(w, http.StatusOK, JSONResponse{
 		ID:     config.ID,
 		Status: config.GetCurrentJobStatusString(),
@@ -152,28 +158,51 @@ func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	nodeChannel := nodeManager.GetAllNodeStatus()
+	nodeInfomations := []NodeInfo{}
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case info := <-nodeChannel:
+			nodeInfomations = append(nodeInfomations, info)
+			if len(nodeInfomations) == nodeManager.Size() {
+				close(nodeChannel)
+				ticker.Stop()
+				goto RETURN
+			}
+		case <-ticker.C:
+			ticker.Stop()
+			goto RETURN
+		}
+	}
+RETURN:
 	r.JSON(w, http.StatusOK, JSONResponse{
 		CurrentMessages: messages,
 		ID:              config.ID,
 		Status:          config.GetCurrentJobStatusString(),
+		NodeInfos:       nodeInfomations,
 	})
 }
 
 func addNode(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
-	var ipinfo IPWithPort
+	ipinfo := IPWithPort{}
 	err := decoder.Decode(&ipinfo)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode data fail"})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
+		return
+	}
+	if err := ipinfo.Validate(); err != nil {
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
 		return
 	}
 	err = nodeManager.AddNode(ipinfo.IPAddress, ipinfo.Port)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "add node fail:" + err.Error()})
 		return
 	}
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+	r.JSON(w, http.StatusOK, JSONResponse{})
 }
 
 func pingNode(w http.ResponseWriter, req *http.Request) {
@@ -182,16 +211,20 @@ func pingNode(w http.ResponseWriter, req *http.Request) {
 	var ipinfo IPWithPort
 	err := decoder.Decode(&ipinfo)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
+		return
+	}
+	if err := ipinfo.Validate(); err != nil {
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
 		return
 	}
 	ip := ipinfo.IPAddress + ":" + ipinfo.Port
 	err = nodeManager.callPing(ip)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "ping node fail:" + err.Error()})
 		return
 	}
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+	r.JSON(w, http.StatusOK, JSONResponse{})
 }
 
 func deleteNode(w http.ResponseWriter, req *http.Request) {
@@ -200,16 +233,20 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 	var ipinfo IPWithPort
 	err := decoder.Decode(&ipinfo)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
 		return
 	}
-	pending := ipinfo.IPAddress + ":" + ipinfo.Port
-	err = nodeManager.Remove(pending)
+	if err := ipinfo.Validate(); err != nil {
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
+		return
+	}
+	pendingDeleteIPInfo := ipinfo.IPAddress + ":" + ipinfo.Port
+	err = nodeManager.Remove(pendingDeleteIPInfo)
 	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "delete node fail:" + err.Error()})
 		return
 	}
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+	r.JSON(w, http.StatusOK, JSONResponse{})
 }
 
 // NewServer function create the http api
@@ -227,7 +264,7 @@ func NewServer() error {
 	r.HandleFunc("/ping", auth(pingNode)).Methods("POST")
 	r.HandleFunc("/start", auth(startDNSTraffic)).Methods("POST")
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
-	r.HandleFunc("/status", (getCurrentStatus)).Methods("GET")
+	r.HandleFunc("/status", auth(getCurrentStatus)).Methods("GET")
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))
 	err := http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
 	return err

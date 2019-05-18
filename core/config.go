@@ -21,6 +21,7 @@ func init() {
 // Configuration define all config for this app
 type Configuration struct {
 	sync.RWMutex       `json:"-" valid:"-"`
+	IsMaster           bool           `json:"-" valid:"-"`
 	Master             string         `json:"master" valid:"ip,optional"`
 	Duration           CustomDuration `json:"duration" valid:"-"`
 	QPS                int            `json:"qps" valid:"-"`
@@ -50,6 +51,7 @@ func NewConfigurationFromFile(file string) (*Configuration, error) {
 
 	config := &Configuration{
 		configFileName: file,
+		IsMaster:       true,
 		Status:         StatusStopped,
 	}
 	err := config.LoadConfigurationFromIniFile(file)
@@ -65,6 +67,12 @@ func NewConfigurationFromFile(file string) (*Configuration, error) {
 
 // GetGlobalConfig return current configuration
 func GetGlobalConfig() *Configuration {
+	if globalConfig == nil {
+		globalConfig = &Configuration{
+			IsMaster: false,
+			Status:   StatusStopped,
+		}
+	}
 	return globalConfig
 }
 
@@ -204,7 +212,7 @@ func (config *Configuration) RemoveAgent(ip string) error {
 	}
 	agentList := strings.Join(config.Agents, ",")
 	log.Println(config.Agents)
-	config.configFileHandler.Section("Query").Key("agent_list").SetValue(agentList)
+	config.configFileHandler.Section("App").Key("agent_list").SetValue(agentList)
 	config.configFileHandler.SaveTo(config.configFileName)
 	return nil
 }

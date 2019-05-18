@@ -30,6 +30,10 @@
                                 <a href="#">Usage</a>
                             </li> -->
                             <li>
+                            <a data-toggle="modal" data-target="#myConsoleModal">
+                                <i class="fa fa-window-restore" aria-hidden="true"></i> Console</a>
+                            </li>
+                            <li>
                                 <a href="https://github.com/zhangmingkai4315/dns-loader">
                                     <i class="fa fa-github" aria-hidden="true"></i> Github</a>
                             </li>
@@ -106,8 +110,6 @@
                                 <i class="fa fa-play-circle" aria-hidden="true"></i> Start</button>
                             <button type="button" class="btn btn-submit config-kill">
                                 <i class="fa fa-stop-circle" aria-hidden="true"></i> Stop</button>
-                            <button type="button" class="btn btn-submit show-console right" data-toggle="modal" data-target="#myConsoleModal">
-                                <i class="fa fa-window-restore" aria-hidden="true"></i> Console</button>
                         </form>
                     </div>
                     <div class="info-status master-status">
@@ -146,7 +148,7 @@
                                             </div>
                                             <div class="item">
                                                 <label class="theme-label">Port</label>
-                                                <input class="theme-input" name="port" value=""> </div>
+                                                <input class="theme-input" name="port" placeholder="8998" value=""> </div>
                                         </form>
                                     </div>
                                     <div class="modal-footer">

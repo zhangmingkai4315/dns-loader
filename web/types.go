@@ -3,9 +3,14 @@ package web
 import (
 	"fmt"
 
+	"github.com/asaskevich/govalidator"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/zhangmingkai4315/dns-loader/core"
 )
+
+func init() {
+	govalidator.SetFieldsRequiredByDefault(true)
+}
 
 // Event define the event send to all node
 type Event uint8
@@ -31,10 +36,26 @@ const (
 
 // IPWithPort define the posted node info
 type IPWithPort struct {
-	IPAddress string `json:"ipaddress"`
-	Port      string `json:"port"`
+	IPAddress string `json:"ipaddress" valid:"ip"`
+	Port      string `json:"port" valid:"port"`
 }
 
+// NodeInfo for status check response
+type NodeInfo struct {
+	IPWithPort
+	JobID  string `json:"job_id" valid:"-"`
+	Status string `json:"status" valid:"-"`
+	Error  string `json:"error" valid:"-"`
+}
+
+// Validate if ip and port infomation is valid
+func (ipp *IPWithPort) Validate() error {
+	_, err := govalidator.ValidateStruct(ipp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (ipp *IPWithPort) toString(defaultPort string) string {
 	if ipp.Port == "" {
 		ipp.Port = defaultPort

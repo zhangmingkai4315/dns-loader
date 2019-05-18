@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -39,48 +38,23 @@ func ping(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func startAgentTraffic(w http.ResponseWriter, req *http.Request) {
+func getAgentStatus(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	decoder := json.NewDecoder(req.Body)
-	status := core.GetGlobalConfig().GetCurrentJobStatus()
-	if status != core.StatusStopped && status != core.StatusInit {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "please make sure no job is running"})
-		return
-	}
-	var config core.Configuration
-	err := decoder.Decode(&config)
-	if err != nil {
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "decode config fail"})
-		return
-	}
-	// localTraffic
-	err = config.ValidateConfiguration()
-	if err != nil {
-		log.Println(err)
-		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": "validate config fail"})
-		return
-	}
-	log.Printf("receive new job id:%s\n", config.ID)
-	go core.GenTrafficFromConfig(&config)
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
-}
-
-func killAgentTraffic(w http.ResponseWriter, req *http.Request) {
-	r := render.New(render.Options{})
-	if stopStatus := core.GloablGenerator.Stop(); true != stopStatus {
-		r.JSON(w, http.StatusInternalServerError, map[string]string{"status": "error", "message": "ServerFail"})
-		return
-	}
-	r.JSON(w, http.StatusOK, map[string]string{"status": "success"})
+	config := core.GetGlobalConfig()
+	r.JSON(w, http.StatusOK, JSONResponse{
+		ID:     config.ID,
+		Status: config.GetCurrentJobStatusString(),
+	})
 }
 
 // NewAgentServer function create the http api
-func NewAgentServer(config *core.Configuration) {
+func NewAgentServer(host, port string) {
 	agent = NewAgent()
 	r := mux.NewRouter()
 	r.HandleFunc("/ping", ping).Methods("GET")
-	r.HandleFunc("/start", startAgentTraffic).Methods("POST")
-	r.HandleFunc("/kill", killAgentTraffic).Methods("GET")
+	r.HandleFunc("/start", startDNSTraffic).Methods("POST")
+	r.HandleFunc("/status", getAgentStatus).Methods("GET")
+	r.HandleFunc("/stop", stopDNSTraffic).Methods("GET")
 	log.Println("agent server route init success")
-	http.ListenAndServe(fmt.Sprintf(":%d", config.AgentPort), http.TimeoutHandler(r, time.Second*10, "timeout"))
+	http.ListenAndServe(fmt.Sprintf("%s:%s", host, port), http.TimeoutHandler(r, time.Second*10, "timeout"))
 }

@@ -6,22 +6,20 @@ import (
 	"github.com/zhangmingkai4315/dns-loader/web"
 )
 
-var agentConfigFile string
+var agentHost string
+var agentPort string
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Run dnsloader in agent mode",
 	Long:  `Run dnsloader in agent mode, receive job from master and gen dns packets`,
 	Run: func(cmd *cobra.Command, args []string) {
-		config := initConfig(agentConfigFile)
-		if config.AgentPort == "" || config.Master == "" {
-			log.Fatalln("agent port and master ip must given")
-		}
-		log.Printf("start agent server listen on %s for master:%s connect", config.AgentPort, config.Master)
-		web.NewAgentServer(config)
+		log.Printf("start agent server at %s:%s", agentHost, agentPort)
+		web.NewAgentServer(agentHost, agentPort)
 		return
 	},
 }
 
 func init() {
-	agentCmd.PersistentFlags().StringVar(&agentConfigFile, "config", "-c", "config file (default is $HOME/config.ini)")
+	agentCmd.PersistentFlags().StringVar(&agentHost, "host", "0.0.0.0", "ipaddress for start agent")
+	agentCmd.PersistentFlags().StringVar(&agentPort, "port", "8998", "port to listen")
 }

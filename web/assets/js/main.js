@@ -214,7 +214,7 @@ $(document).ready(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
-            "port": parseInt(ipWithPort.split(":")[1])
+            "port": ipWithPort.split(":")[1]
         }
         $.ajax({
             type: "DELETE",
@@ -226,9 +226,9 @@ $(document).ready(function () {
             },
             error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.error) {
-                    toastr.error("Delete fail", err.responseJSON.message)
+                    toastr.error(err.responseJSON.error,"delete fail")
                 } else {
-                    toastr.error("Delete fail")
+                    toastr.error("delete fail","Sever Fail")
                 }
             },
             contentType: "application/json"
@@ -239,7 +239,7 @@ $(document).ready(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
-            "port": parseInt(ipWithPort.split(":")[1])
+            "port": ipWithPort.split(":")[1]
         }
         $.ajax({
             type: "POST",
@@ -249,11 +249,10 @@ $(document).ready(function () {
                 toastr.success("ping success")
             },
             error: function (err) {
-                if (err && err.responseJSON && err.responseJSON.message) {
-                    toastr.error("ping fail", err.responseJSON.message)
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error,"ping fail")
                 } else {
-                    toastr.error("ping fail")
-                    // change the color of status to black
+                    toastr.error("ping fail","Sever Fail")
                 }
             },
             contentType: "application/json"
@@ -273,7 +272,7 @@ $(document).ready(function () {
                 if (err && err.responseJSON && err.responseJSON.error) {
                     toastr.error(err.responseJSON.error, "Error")
                 } else {
-                    toastr.error("Error", "ServerFail")
+                    toastr.error("ServerFail")
                 }
             },
             contentType: "application/json"
@@ -286,9 +285,11 @@ $(document).ready(function () {
             toastr.error('IP address does not exist', 'IP Error')
             return
         }
-        data.port = parseInt(data.port)
-        if (data.port < 0) {
-            toastr.error('IP address does not exist', 'IP Error')
+        if(data.port === ""){
+            data.port = "8998"
+        }
+        if (parseInt(data.port) < 0  || parseInt(data.port) > 65535) {
+            toastr.error('Port number should be in [0-65535]', 'Port Error')
             return
         }
         $(".add-node-loading").removeClass("hide")
@@ -302,8 +303,8 @@ $(document).ready(function () {
             },
             error: function (err) {
                 $(".add-node-loading").addClass("hide")
-                if (err && err.responseJSON && err.responseJSON.message) {
-                    toastr.error("Add new node fail", err.responseJSON.message)
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error,"Add new node fail")
                 } else {
                     toastr.error("Add new node fail", "ServerFail")
                 }
@@ -313,7 +314,7 @@ $(document).ready(function () {
     })
 
     // 每隔2秒发送一次查询日志的请求
-    setInterval(function () {
+    var queryStatusTimer = setInterval(function () {
         $.ajax({
             type: "GET",
             url: "/status",
@@ -346,6 +347,7 @@ $(document).ready(function () {
                     toastr.error(err.responseJSON.error, "Error")
                 } else {
                     toastr.error("Error", "Server Fail")
+                    // clearInterval(queryStatusTimer)
                 }
             },
             contentType: "application/json"
