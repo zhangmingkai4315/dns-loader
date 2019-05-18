@@ -26,6 +26,7 @@ var MessagesHub *GlobalMessages
 
 func init() {
 	MessagesHub = NewGloabalMessages(50)
+	SetupLogger()
 }
 
 // Len return current message length
@@ -68,7 +69,7 @@ func (g *GlobalMessages) Get() ([]byte, error) {
 func NewGloabalMessages(max int) *GlobalMessages {
 	events := make([]Message, 0)
 	return &GlobalMessages{
-		MaxSize: 100,
+		MaxSize: max,
 		Events:  events,
 	}
 }

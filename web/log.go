@@ -1,11 +1,10 @@
-package main
+package web
 
 import (
 	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/zhangmingkai4315/dns-loader/web"
 )
 
 //MyHook 定义logrus的hook类型
@@ -13,7 +12,7 @@ type MyHook struct{}
 
 var fmter = new(log.TextFormatter)
 
-// Levels 必须实施的接口类型，返回所有的打印级别信息
+// Levels return all log level for Hooks
 func (h *MyHook) Levels() []log.Level {
 	return []log.Level{
 		log.InfoLevel,
@@ -33,9 +32,8 @@ func (h *MyHook) Fire(entry *log.Entry) (err error) {
 	return
 }
 
-func init() {
+func SetupLogger() {
 	log.SetFormatter(&log.JSONFormatter{})
-	// 将所有日志同时写入messagehub(传递到前端的console)
-	log.SetOutput(web.MessagesHub)
+	log.SetOutput(MessagesHub)
 	log.AddHook(&MyHook{})
 }

@@ -2,7 +2,6 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -186,7 +185,7 @@ func pingNode(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
 		return
 	}
-	ip := fmt.Sprintf("%s:%d", ipinfo.IPAddress, ipinfo.Port)
+	ip := ipinfo.IPAddress + ":" + ipinfo.Port
 	err = nodeManager.callPing(ip)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
@@ -204,7 +203,7 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
 		return
 	}
-	pending := fmt.Sprintf("%s:%d", ipinfo.IPAddress, ipinfo.Port)
+	pending := ipinfo.IPAddress + ":" + ipinfo.Port
 	err = nodeManager.Remove(pending)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, map[string]string{"status": "error", "message": err.Error()})
