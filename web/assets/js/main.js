@@ -194,16 +194,17 @@ $(document).ready(function () {
             type: "POST",
             url: "/start",
             data: JSON.stringify(result),
-            success: function (data) {
-                var jsonObj = data.responseJSON
+            success: function (response) {
+                console.log(response)
                 $('.master-running').removeClass("hide")
-                globalJobInfo.id = jsonObj["id"]
+                globalJobInfo.id = response["id"]
             },
-            error: function (data) {
-                var jsonObj = data.responseJSON
-                if (jsonObj && jsonObj['status'] && jsonObj['status'] === 'error') {
-                    toastr.error(jsonObj['message'] || 'service not available')
-                    return
+            error: function (err) {
+                console.log(err)
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error, "Error")
+                } else {
+                    toastr.error("Error", "Server Fail")
                 }
             },
             contentType: "application/json"
@@ -224,7 +225,7 @@ $(document).ready(function () {
                 window.location.reload()
             },
             error: function (err) {
-                if (err && err.responseJSON && err.responseJSON.message) {
+                if (err && err.responseJSON && err.responseJSON.error) {
                     toastr.error("Delete fail", err.responseJSON.message)
                 } else {
                     toastr.error("Delete fail")
@@ -261,18 +262,16 @@ $(document).ready(function () {
 
 
     $('.config-kill').click(function () {
-        console.log("stop signal send to master server")
         $.ajax({
             type: "GET",
             url: "/stop",
             success: function (response) {
-                console.log(response)
                 $('.master-running').addClass("hide")
                 toastr.success("stop traffic success")
             },
             error: function (err) {
-                if (err && err.responseJSON && err.responseJSON.message) {
-                    toastr.error("Error", err.responseJSON.message)
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error, "Error")
                 } else {
                     toastr.error("Error", "ServerFail")
                 }
@@ -299,8 +298,6 @@ $(document).ready(function () {
             data: JSON.stringify(data),
             success: function (response) {
                 $(".add-node-loading").addClass("hide")
-                // console.log(data)
-                //     // Add to list 
                 window.location.reload()
             },
             error: function (err) {
@@ -321,20 +318,34 @@ $(document).ready(function () {
             type: "GET",
             url: "/status",
             success: function (response) {
-                if (response && typeof response.data === "object") {
-                    var result = response.data.filter(function (d) {
-                        if (typeof d.result !== 'undefined' && d.result === true) {
-                            console.log(d)
-                            return true
-                        }
-                        return false
-                    });
-                    console.log(result.length)
-                    if (result.length > 0) {
-                        // 已经获得结果，关闭loading
-                        $(".master-running").addClass("hide")
+                    if(response.id){
+                        globalJobInfo.id = response.id
                     }
-                    logger.batch(response.data)
+                    if (response.status ) {
+                        switch(response.status){
+                            case "running":
+                            case "init":
+                            case "stopping":
+                                $(".config-submit").attr("disabled", true)
+                                $(".master-running").removeClass("hide")
+                                break;
+                            case "stopped":
+                            default:
+                                $(".config-submit").attr("disabled", false)
+                                $(".master-running").addClass("hide")
+                                break;
+                        }
+                    }
+                    if(response.messages && response.messages.length > 0){
+                        logger.batch(response.messages)
+                    }
+                    
+            },
+            error: function(err){
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error, "Error")
+                } else {
+                    toastr.error("Error", "Server Fail")
                 }
             },
             contentType: "application/json"
