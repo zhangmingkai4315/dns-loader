@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -101,7 +102,6 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
-
 	err = config.ValidateConfiguration()
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
@@ -109,10 +109,11 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
-	go core.GenTrafficFromConfig(config)
 	if config.IsMaster == true {
+		core.GetDBHandler().CreateDNSQuery(config)
 		go nodeManager.Call(Start, config)
 	}
+	go core.GenTrafficFromConfig(config)
 	r.JSON(w, http.StatusOK, JSONResponse{
 		ID:     config.ID,
 		Status: config.GetCurrentJobStatusString(),
@@ -240,13 +241,34 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
 		return
 	}
-	pendingDeleteIPInfo := ipinfo.IPAddress + ":" + ipinfo.Port
-	err = nodeManager.Remove(pendingDeleteIPInfo)
+	err = nodeManager.Remove(ipinfo.IPAddress, ipinfo.Port)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "delete node fail:" + err.Error()})
 		return
 	}
 	r.JSON(w, http.StatusOK, JSONResponse{})
+}
+
+// HistoryResponse return data for history query
+
+func getQueryHistory(w http.ResponseWriter, req *http.Request) {
+	r := render.New(render.Options{})
+	dbHandler := core.GetDBHandler()
+	search := req.URL.Query().Get("search[value]")
+	start, _ := strconv.Atoi(req.URL.Query().Get("start"))
+	draw, _ := strconv.Atoi(req.URL.Query().Get("draw"))
+	length, _ := strconv.Atoi(req.URL.Query().Get("length"))
+	response, err := dbHandler.GetHistoryInfo(start, length, search)
+	if err != nil {
+		r.JSON(w, http.StatusOK, map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+	r.JSON(w, http.StatusOK, map[string]interface{}{
+		"draw": draw,
+		"data": response,
+	})
 }
 
 // NewServer function create the http api
@@ -258,6 +280,7 @@ func NewServer() error {
 	r := mux.NewRouter()
 	r.HandleFunc("/", auth(index)).Methods("GET")
 	r.HandleFunc("/logout", logout).Methods("POST", "GET")
+	r.HandleFunc("/history", auth(getQueryHistory)).Methods("GET")
 	r.HandleFunc("/login", login(config)).Methods("GET", "POST")
 	r.HandleFunc("/nodes", auth(addNode)).Methods("POST")
 	r.HandleFunc("/nodes", auth(deleteNode)).Methods("DELETE")

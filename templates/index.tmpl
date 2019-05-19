@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.css" />
         <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
             crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/dt-1.10.18/datatables.min.css"/>
         <link rel="stylesheet" href="/public/css/style.css">
         <title>DNS-Loader</title>
     </head>
@@ -26,9 +27,9 @@
                     <!-- Collect the nav links, forms, and other content for toggling -->
                     <div class="collapse navbar-collapse" id="navbar-collapse-2">
                         <ul class="nav navbar-nav navbar-right">
-                            <!-- <li>
-                                <a href="#">Usage</a>
-                            </li> -->
+                            <li>
+                                <a id="show-history"><i class="fa fa-history" aria-hidden="true"></i> History</a>
+                            </li>
                             <li>
                             <a data-toggle="modal" data-target="#myConsoleModal">
                                 <i class="fa fa-window-restore" aria-hidden="true"></i> Console</a>
@@ -52,6 +53,23 @@
             <!-- /.navbar -->
         </div>
         <div class="container main">
+            <div class="row history-box hide table-responsive">
+                <table id="history-table" class="display table table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Server</th>
+                                <th>Port</th>
+                                <th>Duration</th>
+                                <th>QPS</th>
+                                <th>Domain</th>
+                                <th>Length</th>
+                                <th>Type</th>
+                                <th>CreatedAt</th>
+                                <th>Operation</th>
+                            </tr>
+                        </thead>
+                </table>
+            </div>
             <div class="row">
                 <div class="col-md-4 info-box">
                     <div class="info-title">
@@ -177,8 +195,9 @@
                         <table class="table ">
                             <thead>
                                 <tr>
-                                    <th>IP Address</th>
-                                    <th>Status</th>
+                                    <th>IP</th>
+                                    <th>Ping Success</th>
+                                    <th>Running</th>
                                     <th>Function</th>
                                 </tr>
                             </thead>
@@ -187,8 +206,11 @@
                                 <tr>
                                     <td>
                                         <i class="fa fa-hdd-o" aria-hidden="true"></i> {{$value}}</td>
-                                    <td>
-                                        <i class="fa fa-2x fa-check-circle-o" style="font-size: 1.5em;color:#1ff300;" aria-hidden="true"></i>
+                                    <td class="agent-ping" data-item="{{$value}}">
+                                        <i class="fa fa-2x fa-check-circle-o ping-success" aria-hidden="true"></i>
+                                    </td>
+                                    <td class="agent-running" data-item="{{$value}}">
+                                        <i class="fa fa-2x fa-spinner fa-pulse running-success hide" aria-hidden="true"></i>
                                     </td>
                                     <td>
                                         <button class="btn small-ping-button" data-item="{{$value}}">
@@ -201,12 +223,17 @@
                             </tbody>
                     </div>
                 </div>
-                <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-                    crossorigin="anonymous"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
-                <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
-                    crossorigin="anonymous"></script>
-                <script src="/public/js/main.js"></script>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.18/datatables.min.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+        <script src="/public/js/moment.js"></script>
+        <script src="/public/js/main.js"></script>
     </body>
 
 </html>

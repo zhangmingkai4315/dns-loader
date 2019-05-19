@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-
 	uuid "github.com/nu7hatch/gouuid"
 
 	"github.com/asaskevich/govalidator"
@@ -32,7 +30,6 @@ type Configuration struct {
 	QueryType          string         `json:"query_type" valid:"-"`
 	HTTPServer         string         `json:"web" valid:"-"`
 	AgentPort          string         `json:"agent_port" valid:"port,optional"`
-	Agents             []string       `json:"agents"  valid:"-"`
 	User               string         `json:"-" valid:"-"`
 	Password           string         `json:"-" valid:"-"`
 	AppSecrect         string         `json:"-" valid:"-"`
@@ -147,9 +144,6 @@ func (config *Configuration) LoadConfigurationFromIniFile(filename string) (err 
 	if configSectionApp.HasKey("http_server") {
 		config.HTTPServer = configSectionApp.Key("http_server").String()
 	}
-	if configSectionApp.HasKey("agent_list") {
-		config.Agents = configSectionApp.Key("agent_list").Strings(",")
-	}
 	configSectionQuery, err := cfg.GetSection("Query")
 	if err != nil {
 		return fmt.Errorf("Configuration file load section [Query] error:%s", err.Error())
@@ -182,37 +176,4 @@ func (config *Configuration) LoadConfigurationFromIniFile(filename string) (err 
 		config.QueryType = configSectionQuery.Key("query_type").String()
 	}
 	return
-}
-
-// AddAgent dynamic add a new agent to the configuration list
-func (config *Configuration) AddAgent(ip string) error {
-	if StringInSlice(ip, config.Agents) {
-		return errors.New("already in config")
-	}
-	config.Agents = append(config.Agents, ip)
-	// save to file
-	if config.configFileHandler == nil {
-		return errors.New("not ready for hand config file")
-	}
-	agentList := strings.Join(config.Agents, ",")
-	config.configFileHandler.Section("App").Key("agent_list").SetValue(agentList)
-	config.configFileHandler.SaveTo(config.configFileName)
-	return nil
-}
-
-// RemoveAgent remove a agent ip from server
-func (config *Configuration) RemoveAgent(ip string) error {
-	if !StringInSlice(ip, config.Agents) {
-		return errors.New("agent not in config")
-	}
-	log.Printf("trying to remove agent %s", ip)
-	config.Agents = RemoveStringInSlice(ip, config.Agents)
-	if config.configFileHandler == nil {
-		return errors.New("not ready for hand config file")
-	}
-	agentList := strings.Join(config.Agents, ",")
-	log.Println(config.Agents)
-	config.configFileHandler.Section("App").Key("agent_list").SetValue(agentList)
-	config.configFileHandler.SaveTo(config.configFileName)
-	return nil
 }

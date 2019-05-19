@@ -50,6 +50,33 @@
   version = "v1.0"
 
 [[projects]]
+  digest = "1:ac0cf20506076f1243a12c66052b862988915b1cd41881987addf0da946077c6"
+  name = "github.com/jinzhu/gorm"
+  packages = [
+    ".",
+    "dialects/sqlite",
+  ]
+  pruneopts = ""
+  revision = "b7156195f7f3415f97c20abbd6aff894b847fee8"
+  version = "v1.9.8"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d9a7385b84d8187fd94e0357045c6fa1147ca94caa56fdd539336c7c102fc728"
+  name = "github.com/jinzhu/inflection"
+  packages = ["."]
+  pruneopts = ""
+  revision = "04140366298a54a039076d798123ffa108fff46c"
+
+[[projects]]
+  digest = "1:8bbdb2b3dce59271877770d6fe7dcbb8362438fa7d2e1e1f688e4bf2aac72706"
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c7c4067b79cc51e6dfdcef5c702e74b1e0fa7c75"
+  version = "v1.10.0"
+
+[[projects]]
   branch = "master"
   digest = "1:55c48c9cfdf8bab6f4911f621616fbe223c0b72a6df9aab6b172ab7e5cfc6bd2"
   name = "github.com/nu7hatch/gouuid"
@@ -91,22 +118,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0d06c0dd6a462a341911b4a83998434e078dafa821ba6d6c84f8c8e03b91d9fa"
+  digest = "1:61e7c4fda6be005564928bd05c2c21277428ed207dae5d0b99d3639cb1f9b37c"
   name = "go.uber.org/ratelimit"
   packages = [
     ".",
     "internal/clock",
   ]
   pruneopts = ""
-  revision = "d15fa2e2a63dd52104bc96d8ea7dc47ce8027de8"
+  revision = "c15da02342779cb6dc027fc95ee2277787698f36"
 
 [[projects]]
-  digest = "1:1f557d2b7814235704f63f15e5bd3d7a5d3be9d3f9e7bf74b411150df89886e6"
+  digest = "1:03edf882162b807cdf1bc558c66226167fa2f8eb44359eac2eeb3794a91cb168"
   name = "gopkg.in/ini.v1"
   packages = ["."]
   pruneopts = ""
-  revision = "f280b3ba517bf5fc98922624f21fb0e7a92adaec"
-  version = "v1.30.3"
+  revision = "c85607071cf08ca1adaf48319cd1aa322e81d8c1"
+  version = "v1.42.0"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -115,6 +142,8 @@
     "github.com/asaskevich/govalidator",
     "github.com/gorilla/mux",
     "github.com/gorilla/sessions",
+    "github.com/jinzhu/gorm",
+    "github.com/jinzhu/gorm/dialects/sqlite",
     "github.com/nu7hatch/gouuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",

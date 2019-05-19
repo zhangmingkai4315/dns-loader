@@ -6,11 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/rpc"
 	"strings"
 	"time"
 
-	uuid "github.com/nu7hatch/gouuid"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhangmingkai4315/dns-loader/core"
 )
@@ -18,16 +17,34 @@ import (
 // NodeManager define the node list
 // when new config generated the manager will call the nodes one by one
 type NodeManager struct {
+	DB     *gorm.DB
 	IPList []string
-	config *core.Configuration
 }
 
 // NewNodeManager will create a new node manager
 func NewNodeManager(c *core.Configuration) *NodeManager {
-	return &NodeManager{
-		IPList: c.Agents,
-		config: c,
+	dbHander := core.GetDBHandler()
+	agents := []core.Agent{}
+	dbHander.Model(&core.Agent{}).Find(&agents)
+	iplist := []string{}
+	for _, agent := range agents {
+		iplist = append(iplist, agent.IP+":"+agent.Port)
 	}
+	return &NodeManager{
+		DB:     core.GetDBHandler().DB,
+		IPList: iplist,
+	}
+}
+
+// SyncIPList sync db and memory
+func (manager *NodeManager) SyncIPList() {
+	agents := []core.Agent{}
+	manager.DB.Model(&core.Agent{}).Find(&agents)
+	iplist := []string{}
+	for _, agent := range agents {
+		iplist = append(iplist, agent.IP+":"+agent.Port)
+	}
+	manager.IPList = iplist
 }
 
 // GetAllNodeStatus check all node status
@@ -54,27 +71,26 @@ func (manager *NodeManager) AddNode(ip string, port string) error {
 	if err != nil {
 		return err
 	}
-	manager.IPList = append(manager.IPList, newAgent)
-	config := core.GetGlobalConfig()
+	err = core.GetDBHandler().AddAgent(ip, port)
 	if err != nil {
 		return err
 	}
-	return config.AddAgent(newAgent)
+	manager.IPList = append(manager.IPList, ip+":"+port)
+	return nil
 }
 
 // Remove will remove the ip from current list
-func (manager *NodeManager) Remove(deleteip string) (err error) {
-	manager.IPList = core.RemoveStringInSlice(deleteip, manager.IPList)
-	config := core.GetGlobalConfig()
+func (manager *NodeManager) Remove(ip string, port string) error {
+	err := core.GetDBHandler().RemoveAgent(ip, port)
 	if err != nil {
 		return err
 	}
-	return config.RemoveAgent(deleteip)
+	manager.IPList = core.RemoveStringInSlice(ip+":"+port, manager.IPList)
+	return nil
 }
 
 // Call function will send data to all node
 func (manager *NodeManager) Call(event Event, data interface{}) error {
-
 	for _, ip := range manager.IPList {
 		go func(ip string, event Event, data interface{}) {
 			switch event {
@@ -123,37 +139,6 @@ func (manager *NodeManager) callStart(ip string, data interface{}) (err error) {
 	response, err := netClient.Post(fmt.Sprintf("http://%s/start", ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil && response.StatusCode != 200 {
 		return err
-	}
-	return nil
-}
-
-// callCheckStatus function will check all the node with uuid
-func (manager *NodeManager) callCheckStatus(ip string, event Event, data interface{}) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("panic from rpc call[%s]\n", ip)
-		}
-	}()
-	client, err := rpc.DialHTTP("tcp", ip)
-	defer client.Close()
-	if err != nil {
-		log.Printf("call remote node rpc failed:[%s] %s\n", ip, err.Error())
-		return
-	}
-	id, ok := data.(uuid.UUID)
-	if ok != true {
-		log.Println("config data fail to send")
-		return
-	}
-	var result *RPCResult
-	args := &RPCCall{
-		Event: event,
-		ID:    id,
-	}
-	err = client.Call("Manager.CheckStatus", args, &result)
-	if err != nil {
-		log.Printf("send check status to node faile:[%s] %s", ip, err.Error())
-		return
 	}
 	return nil
 }

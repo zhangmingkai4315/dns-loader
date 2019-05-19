@@ -20,13 +20,8 @@ body {
 
 
 /* main css */
-
-.main {
-    height: 90%;
-}
-
-.main>.row {
-    height: 90%;
+.main > .row {
+    background-color: #2e2e2e;
 }
 
 .main>.row>.info-box {
@@ -35,8 +30,6 @@ body {
     flex-direction: column;
     flex-wrap: nowrap;
     padding: 0 1em 1em 1em;
-    background: #2e2e2e;
-    border-left: 1px solid #1f1a1a;
 }
 
 .main>.row>.info-status {
@@ -146,6 +139,7 @@ body {
 
 .navbar-default .navbar-nav>li>a {
     color: #fff;
+    cursor: pointer;
 }
 
 .navbar-default .navbar-nav>li>a:hover {
@@ -461,4 +455,25 @@ body {
 
 .error {
     color: red!important;
+}
+.ping-success,
+.running-success{
+    font-size: 1.5em;color:#1ff300;
+}
+/* history box */
+
+.history-box{
+    background: #2E2E2E;
+    margin-bottom: 1em;
+    padding: 0.5em 1em;
+}
+.table-hover>tbody>tr:hover {
+    background-color: #404040!important;
+}
+
+table>tbody>tr>td>button{
+    background-color: black;
+    border-color: #7f7f7f;
+    font-size: .8em;
+    padding: .3em 1em;
 }

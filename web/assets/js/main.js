@@ -185,6 +185,37 @@ var logger = new Logger("console-info")
 
 
 $(document).ready(function () {
+    var historyTable = $('#history-table').DataTable( {
+        "processing": true,
+        "paging": true,
+        "serverSide": true,
+        "ordering": false,
+        "lengthChange": false,
+        "info": false,
+        "ajax": "/history",
+        "dataSrc": "data",
+        "pagingType": "simple",
+        "columns": [
+            {data: "server"},
+            {data: "port"},
+            {data: "duration"},
+            {data: "qps"},
+            {data: "domain"},
+            {data: "domain_random_length"},
+            {data: "query_type"},
+            {
+                "targets": -2,
+                "data": function(row){
+                    return moment(row.CreatedAt).fromNow();
+                },
+            },
+            {
+                "targets": -1,
+                "data": null,
+                "defaultContent": "<button>Reload</button>"
+            } 
+        ]
+    });
     $(".config-submit").click(function () {
         var result = getFormData($('form[name="config"]'))
         if (validateConfig(result) === false) {
@@ -195,9 +226,9 @@ $(document).ready(function () {
             url: "/start",
             data: JSON.stringify(result),
             success: function (response) {
-                console.log(response)
                 $('.master-running').removeClass("hide")
                 globalJobInfo.id = response["id"]
+                historyTable.ajax.reload();
             },
             error: function (err) {
                 console.log(err)
@@ -234,6 +265,42 @@ $(document).ready(function () {
             contentType: "application/json"
         })
     })
+    
+    $("#show-history").click(function () {
+        var isHide = $(".history-box").hasClass("hide")
+        if(isHide === true){
+            $(".history-box").removeClass("hide")
+        }else{
+            $(".history-box").addClass("hide")
+        }
+    })
+   
+
+    function updateConfigurationFromData(data){
+        var keys = Object.keys(data)
+        for(var i = 0; i<keys.length; i++){
+            var inputSelector = "form[name='config'] input[name='"+keys[i]+"'"
+            if($(inputSelector).length!==0){
+                $(inputSelector).val(data[keys[i]])
+            }
+        }
+    }
+
+    $('#history-table tbody').on( 'click', 'button', function () {
+        var data = historyTable.row( $(this).parents('tr') ).data();
+        // hide the table 
+        $(".history-box").addClass("hide")
+        // set to current configuration
+        updateConfigurationFromData(data)
+        
+    } );
+    function updatePingStatus(ipinfo, pingSuccess){
+        if(pingSuccess === true){
+            $(".agent-ping[data-item='"+ipinfo+"']").find("i").removeClass("hide")
+        }else{
+            $(".agent-ping[data-item='"+ipinfo+"']").find("i").addClass("hide")
+        }    
+    }
 
     $(".small-ping-button").click(function () {
         var ipWithPort = $(this).attr("data-item")
@@ -247,6 +314,7 @@ $(document).ready(function () {
             data: JSON.stringify(data),
             success: function (data) {
                 toastr.success("ping success")
+                updatePingStatus(ipWithPort,true)
             },
             error: function (err) {
                 if (err && err.responseJSON && err.responseJSON.error) {
@@ -254,6 +322,7 @@ $(document).ready(function () {
                 } else {
                     toastr.error("ping fail","Sever Fail")
                 }
+                updatePingStatus(ipWithPort,false)
             },
             contentType: "application/json"
         })
@@ -312,7 +381,16 @@ $(document).ready(function () {
             contentType: "application/json"
         })
     })
-
+    function updateAgentStatus(nodes){
+        nodes.map(function(node){
+            var nodeInfo = node.ipaddress + ":" + node.port;
+            if(node.status === "running"){
+                $(".agent-running[data-item='"+nodeInfo+"']").find("i.running-success").removeClass("hide")
+            }else{
+                $(".agent-running[data-item='"+nodeInfo+"']").find("i.running-success").addClass("hide")
+            }
+        })
+    }
     // 每隔2秒发送一次查询日志的请求
     var queryStatusTimer = setInterval(function () {
         $.ajax({
@@ -340,7 +418,9 @@ $(document).ready(function () {
                     if(response.messages && response.messages.length > 0){
                         logger.batch(response.messages)
                     }
-                    
+                    if(response.nodes && response.nodes.length > 0){
+                        updateAgentStatus(response.nodes)
+                    }
             },
             error: function(err){
                 if (err && err.responseJSON && err.responseJSON.error) {
