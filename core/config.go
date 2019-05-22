@@ -26,6 +26,8 @@ type Configuration struct {
 	Server             string         `json:"server" valid:"ip"`
 	Port               string         `json:"port" valid:"port"`
 	Domain             string         `json:"domain" valid:"-"`
+	EnableEDNS         string         `json:"edns_enable" valid:"-"`
+	EnableDNSSEC       string         `json:"dnssec_enable" valid:"-"`
 	DomainRandomLength int            `json:"domain_random_length" valid:"-"`
 	QueryType          string         `json:"query_type" valid:"-"`
 	HTTPServer         string         `json:"web" valid:"-"`

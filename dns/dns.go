@@ -109,9 +109,14 @@ type DNSPacket struct {
 }
 
 // SetQuestion will set the basic dns packet infomation
-func (dns *DNSPacket) SetQuestion(name string, dnstype uint16) *DNSPacket {
+func (dns *DNSPacket) SetQuestion(name string, dnstype uint16, enableEDNS, enableDNSSEC bool) *DNSPacket {
 	dns.Header.ID = GenerateRandomID(true)
 	dns.Header.RecursionDesired = true
+	log.Infof("enable ends = %v enable dnssec = %v", enableEDNS, enableDNSSEC)
+	if enableDNSSEC || enableEDNS {
+		dns.Header.AuthenticatedData = true
+		dns.AdditionRRs = 1
+	}
 	dns.Questions = 1
 	dns.Question = make([]Question, 1)
 	dns.Question[0] = Question{name, dnstype, ClassINET}
@@ -119,10 +124,12 @@ func (dns *DNSPacket) SetQuestion(name string, dnstype uint16) *DNSPacket {
 }
 
 // ToBytes will generate the first raw bytes of the dns packet
-func (dns *DNSPacket) ToBytes() (msg []byte, err error) {
+func (dns *DNSPacket) ToBytes(edns bool, dnssec bool) (msg []byte, err error) {
 	var rawheader RawHeader
 	header := dns.Header
 	rawheader.ID = header.ID
+	var ednsBytes = []byte{0, 0, 41, 16, 0, 0, 0, 0, 0, 0, 0}
+	var dnssecBytes = []byte{0, 0, 41, 16, 0, 0, 0, 128, 0, 0, 0}
 	rawheader.Bits = uint16(header.Opcode)<<11 | uint16(header.Rcode)
 	if header.Response {
 		rawheader.Bits |= _QR
@@ -150,6 +157,7 @@ func (dns *DNSPacket) ToBytes() (msg []byte, err error) {
 	}
 	question := dns.Question
 	rawheader.Qdcount = uint16(len(question))
+	rawheader.Arcount = dns.AdditionRRs
 	offset := 0
 	formatName := PackDomainName(FqdnFormat(question[0].Name))
 	packLen := 12 + len(formatName) + 4
@@ -162,6 +170,13 @@ func (dns *DNSPacket) ToBytes() (msg []byte, err error) {
 	offset, err = dns.Question[0].pack(msg, offset, formatName)
 	if err != nil {
 		return nil, err
+	}
+	if dnssec == true {
+		msg = append(msg, dnssecBytes...)
+		offset += 11
+	} else if edns == true {
+		msg = append(msg, ednsBytes...)
+		offset += 11
 	}
 	dns.RawByte = msg[:offset]
 	dns.init = true
@@ -214,7 +229,6 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 	if runtime.NumCPU() == 1 {
 		MaxProducerNumber = 1
 	}
-	// 仅仅使用一半的服务器cpu资源
 	MaxProducerNumber = int(runtime.NumCPU() / 2)
 	log.Printf("From main goroutine fork %d sub goroutine for generate\n", MaxProducerNumber)
 
@@ -240,8 +254,6 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 			jumpOut = true
 		}()
 	}
-
-	// This goroutine will do statics work.
 	go func() {
 		for {
 			select {
@@ -317,10 +329,15 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 }
 
 // InitialPacket initial the basic setup
-func (dns *DNSPacket) InitialPacket(domain string, length int, queryType uint16) {
+func (dns *DNSPacket) InitialPacket(
+	domain string,
+	length int,
+	queryType uint16,
+	enableEDNS, enableDNSSEC bool,
+) {
 	log.Infof("dns packet info :[domain=%s,length=%d,type=%d]", domain, length, queryType)
-	dns.SetQuestion(FqdnFormat(GenRandomDomain(length, domain)), queryType)
-	dns.ToBytes()
+	dns.SetQuestion(FqdnFormat(GenRandomDomain(length, domain)), queryType, enableEDNS, enableDNSSEC)
+	dns.ToBytes(enableEDNS, enableDNSSEC)
 	dns.RandomLength = length
 	dns.OriginalDomain = domain
 }

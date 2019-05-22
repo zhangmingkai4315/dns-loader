@@ -34,21 +34,39 @@ func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err er
 
 // InitPacket init a packet for dns query data
 func (client *DNSClient) InitPacket() error {
+	enableEDNS := false
+	enableDNSSEC := false
+	if client.Config.EnableEDNS == "true" {
+		enableEDNS = true
+	}
+	if client.Config.EnableDNSSEC == "true" {
+		enableDNSSEC = true
+	}
+
 	client.packet = new(dns.DNSPacket)
-	// client.packet.InitialPacket(domain, randomlen, dns.TypeA)
 	if client.Config.QueryType != "" {
 		queryTypeCode, err := dns.GetDNSTypeCodeFromString(client.Config.QueryType)
 		if err != nil {
 			log.Errorf("init packet fail: %s", err.Error())
 			return err
 		}
-		client.packet.InitialPacket(client.Config.Domain,
-			client.Config.DomainRandomLength, queryTypeCode)
+		client.packet.InitialPacket(
+			client.Config.Domain,
+			client.Config.DomainRandomLength,
+			queryTypeCode,
+			enableEDNS,
+			enableDNSSEC,
+		)
 		return nil
 	}
-	client.packet.InitialPacket(client.Config.Domain,
+
+	client.packet.InitialPacket(
+		client.Config.Domain,
 		client.Config.DomainRandomLength,
-		dns.TypeA)
+		dns.TypeA,
+		enableEDNS,
+		enableDNSSEC,
+	)
 	client.packet.RandomType = true
 	return nil
 }

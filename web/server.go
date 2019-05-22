@@ -102,6 +102,7 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
+	log.Infof("%+v", config)
 	err = config.ValidateConfiguration()
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{

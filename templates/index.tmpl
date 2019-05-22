@@ -104,10 +104,32 @@
                                 <input class="theme-input" type="number" name="domain_random_length" placeholder="5" value="">
                             </div>
                             <div class="item">
-                                <label class="theme-label">Query Type</label>
+                                <label class="theme-label">QueryType</label>
                                 <input class="theme-input" type="text" name="query_type" placeholder="random dns type" value="">
                             </div>
-
+                            <div class="item">
+                                <label class="theme-label">EDNS v0</label>
+                                    <label class="radio-container">Enable
+                                    <input type="radio" checked="checked" value="true" name="edns_enable">
+                                    <span class="checkmark"></span>
+                                    </label>
+                                    <label class="radio-container">Disable
+                                    <input type="radio" value="false" name="edns_enable">
+                                    <span class="checkmark"></span>
+                                    </label>
+                            </div>
+                            <div class="item">
+                                <label class="theme-label">DNSSEC</label>
+                                    <label class="radio-container">Enable
+                                    <input type="radio" checked="checked" value="true" name="dnssec_enable">
+                                    <span class="checkmark"></span>
+                                    </label>
+                                    <label class="radio-container">Disable
+                                    <input type="radio" value="false" name="dnssec_enable">
+                                    <span class="checkmark"></span>
+                                    </label>
+                                
+                            </div>
                             <div class="modal fade" tabindex="-1" id="myConsoleModal" role="dialog">
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content theme-modal">
@@ -196,7 +218,7 @@
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>Ping Success</th>
+                                    <th>Ping</th>
                                     <th>Running</th>
                                     <th>Function</th>
                                 </tr>
