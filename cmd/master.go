@@ -31,7 +31,7 @@ var masterCmd = &cobra.Command{
 
 func init() {
 	masterCmd.PersistentFlags().StringVar(&masterConfigFile, "config", "", "config file (default is $HOME/config.ini)")
-	masterCmd.PersistentFlags().StringVar(&dbFile, "dbfile", "app.db", "database file for dns loader app")
+	masterCmd.PersistentFlags().StringVar(&dbFile, "dbfile", "app.db", "database file for dns loader app(create automatic)")
 }
 
 func initMasterMode(cfgFile string, dbfile string) *core.Configuration {

@@ -1,14 +1,17 @@
 # dns-loader
-go语言实现的dns负载测试工具
+
+DNS Benchmark test tools, build with a manager webui for remote control. And you can also add agents to do the benchmark job. 
 
 
-### 1 启动程序
+### 1 Usage
 
-#### 1.1 参数说明
+#### 1.1 Download 
 
-程序运行通过命令模式执行，执行程序二进制后，有多个模式可供选择，分别是adhoc, master和agent模式.
+You can download the build binary from release page, no need to install. Just copy the binary to your server or pc and start the app in command line.
+
 
 ```shell
+$ dns-loader 
 Usage:
   dns-loader [flags]
   dns-loader [command]
@@ -24,11 +27,9 @@ Flags:
   -h, --help   help for dnsloader
 ```
 
+#### 1.2  adhoc
 
-#### 1.1  adhoc模式
- 
-该模式下无需指定配置文件, 所有的配置通过命令行来输入，仅仅执行一次发包，单机模式，如需要中断直接运行ctrl+C即可退出。支持的命令如下：
-
+adhoc mode is the basic running mode of dns-loader, just like dnsperf but no perf files support, all dns query domain and type will be generated from arguments.
 
 ```shell
 Usage:
@@ -45,9 +46,9 @@ Flags:
   -s, --server string      dns server ip
 ```
 
-**实例** 
+**example** 
 
-下面通过adhoc命令向baidu.com发送随机五个字符长度的域名比如```abcde.baidu.com```， QPS=100, 域名服务器地址为8.8.8.8。
+send to dns server 127.0.0.1(default port is 53) ,query domain is test with prefix random subdomin length 5(just like xjsjf.test, adfnd.test), max query persecond is 100000. query type default is random you can set it to A or AAAA as you wish. default duration is 60s
 
 ```
 ./dns-loader adhoc -d test -s 127.0.0.1 -Q 100000
@@ -71,23 +72,25 @@ INFO[0060] status unknown:2595915 [99.17]                result=true
 INFO[0060] stop success!
 
 ```
-#### 1.2  master模式
+#### 1.3  master
 
-该模式下需要指定模式类型为`master`和对应的配置文件，运行后通过web浏览器来管理发包请求，默认登入用户名和密码为admin/admin,登入配置发包类型和模式后点击开始即可，该模式下可以添加agent，只需要agent端运行agent模式即可。
+master mode will allow user set the bench arguments in web ui, default webui link is http://HOST:9889, the user/password is set in config.ini file. 
+
 ```
 Usage:
   dns-loader master [flags]
 
 Flags:
-      --config string   config file (default is $HOME/config.ini)
   -h, --help            help for master
+      --config string   config file (default is $HOME/config.ini)
+      --dbfile string   database file for dns loader app(create automatic) (default "app.db")
 ```
 
-启动后访问：http://localhost:9889
 
-#### 1.3  agent模式
+#### 1.4  agent
 
-该模式需要指定模式类型为`agent`和配置文件，可放入后台运行，该模式不会开启任何的web页面，但是会提供http接口供master服务器端调用
+start agent host in any host which can talk with master host, it will listen the command and do query job. you need add the connection agent ip and port in master webui, after that master and agents can do query job as the same.
+
 ```
 Run dns-loader in agent mode, receive job from master and gen dns packets
 
@@ -95,13 +98,8 @@ Usage:
   dns-loader agent [flags]
 
 Flags:
-      --config string   config file (default is $HOME/config.ini) (default "-c")
   -h, --help            help for agent
-```
+      --host string   ipaddress for start agent (default "0.0.0.0")
+      --port string   port to listen (default "8998")
 
-### 开发环境
-
-如需开发，可以启动一个权威DNS服务器用于测试使用, 权威配置文件在docker目录中conf文件夹下
-```
-docker-compose up
 ```
