@@ -1,9 +1,7 @@
 package core
 
 import (
-	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 )
 
@@ -44,20 +42,4 @@ func GenRandomDomain(length int, domain string) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b) + "." + domain
-}
-
-// CustomDuration define a custom time duration for easy json serial
-type CustomDuration struct {
-	time.Duration
-}
-
-// UnmarshalJSON for json unmarshal
-func (cd *CustomDuration) UnmarshalJSON(b []byte) (err error) {
-	cd.Duration, err = time.ParseDuration(strings.Trim(string(b), `"`))
-	return
-}
-
-// MarshalJSON for json marshal
-func (cd *CustomDuration) MarshalJSON() (b []byte, err error) {
-	return []byte(fmt.Sprintf(`"%s"`, cd.String())), nil
 }

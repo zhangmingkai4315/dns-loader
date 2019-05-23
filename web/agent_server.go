@@ -10,48 +10,22 @@ import (
 	"github.com/zhangmingkai4315/dns-loader/core"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/nu7hatch/gouuid"
 	"github.com/unrolled/render"
 )
-
-// Agent define the agent  object
-type Agent struct {
-	ID     string
-	Status Event
-	config core.Configuration
-}
-
-var agent *Agent
-
-// NewAgent create new agent
-func NewAgent() *Agent {
-	id, _ := uuid.NewV4()
-	return &Agent{
-		ID:     id.String(),
-		Status: Ready,
-	}
-}
-func ping(w http.ResponseWriter, req *http.Request) {
-	r := render.New(render.Options{})
-	r.JSON(w, http.StatusOK, map[string]string{"id": agent.ID, "status": "success", "message": "pong"})
-	log.Printf("ping request from %s\n", req.RemoteAddr)
-	return
-}
 
 func getAgentStatus(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	config := core.GetGlobalConfig()
+	log.Debugf("receive status query from %s", req.RemoteAddr)
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.ID,
+		ID:     config.JobID,
 		Status: config.GetCurrentJobStatusString(),
 	})
 }
 
 // NewAgentServer function create the http api
 func NewAgentServer(host, port string) {
-	agent = NewAgent()
 	r := mux.NewRouter()
-	r.HandleFunc("/ping", ping).Methods("GET")
 	r.HandleFunc("/start", startDNSTraffic).Methods("POST")
 	r.HandleFunc("/status", getAgentStatus).Methods("GET")
 	r.HandleFunc("/stop", stopDNSTraffic).Methods("GET")

@@ -8,6 +8,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Event define the event send to all node
+type Event uint8
+
+const (
+	// Ready usually for listening status
+	Ready Event = iota
+	// Start and send the new config
+	Start
+	// Status the status
+	Status
+	// Running status with some message
+	Running
+	// Kill the load
+	Kill
+	// Error Status
+	Error
+	// Stop the load in normal way
+	Stop
+	// Ping will do health check the status of node
+	Ping
+)
+
+// AgentStatusJSONResponse for status query response
+type AgentStatusJSONResponse struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Error  string `json:"error"`
+}
+
 // Generator define the behavior of loader
 type Generator interface {
 	Start() bool

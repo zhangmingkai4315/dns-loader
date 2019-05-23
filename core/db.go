@@ -1,10 +1,10 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
+	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/gorm"
@@ -22,21 +22,32 @@ type DBHandler struct {
 // Agent save all agent information in sqlite table
 type Agent struct {
 	gorm.Model
-	IP   string
-	Port string
-	Live bool
+	UUID   string `json:"uuid"`
+	IP     string `json:"ip"`
+	Port   string `json:"port"`
+	Live   bool   `json:"live"`
+	Enable bool   `json:"enable"`
+}
+
+// NewAgent create a new agent
+func NewAgent(ip, port string) *Agent {
+	id, _ := uuid.NewV4()
+	return &Agent{
+		UUID:   id.String(),
+		Live:   false,
+		Enable: true,
+	}
+}
+
+//ConnectionInfo return connect url
+func (agent Agent) ConnectionInfo() string {
+	return agent.IP + ":" + agent.Port
 }
 
 // DNSQuery save all query history
 type DNSQuery struct {
 	gorm.Model
-	Server    string `json:"server"`
-	Port      string `json:"port"`
-	Duration  string `json:"duration"`
-	QPS       int    `json:"qps"`
-	Domain    string `json:"domain"`
-	Length    int    `json:"domain_random_length"`
-	QueryType string `json:"query_type"`
+	JobConfig
 }
 
 // NewDatabaseFromFile create database from file
@@ -65,50 +76,11 @@ func GetDBHandler() *DBHandler {
 	return dbHander
 }
 
-// AddAgent dynamic add a new agent in the database
-func (dbHander DBHandler) AddAgent(ip string, port string) error {
-	agent := Agent{
-		IP:   ip,
-		Port: port,
-	}
-	err := dbHander.First(&agent).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			// insert a new agent
-			dbHander.Save(&agent)
-			return nil
-		}
-		return fmt.Errorf("save new agent fail: %s", err)
-	}
-	return errors.New("already exist")
-}
-
-// RemoveAgent remove a agent ip from database
-func (dbHander DBHandler) RemoveAgent(ip string, port string) error {
-	agent := Agent{
-		IP:   ip,
-		Port: port,
-	}
-	err := dbHander.Unscoped().Delete(&agent).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return errors.New("agent not in database")
-		}
-		return fmt.Errorf("delete agent fail: %s", err)
-	}
-	return nil
-}
-
 // CreateDNSQuery save a new dns query info
 func (dbHander *DBHandler) CreateDNSQuery(config *Configuration) error {
+	jobConfig := config.JobConfig
 	dnsQuery := DNSQuery{
-		Server:    config.Server,
-		Port:      config.Port,
-		Duration:  config.Duration.String(),
-		QPS:       config.QPS,
-		Domain:    config.Domain,
-		Length:    config.DomainRandomLength,
-		QueryType: config.QueryType,
+		JobConfig: *jobConfig,
 	}
 	return dbHander.Model(&DNSQuery{}).Save(&dnsQuery).Error
 }

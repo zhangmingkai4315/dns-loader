@@ -15,15 +15,14 @@ import (
 
 var currentPath string
 var store *sessions.CookieStore
-var nodeManager *NodeManager
 
 // JSONResponse the response to front end
 type JSONResponse struct {
-	CurrentMessages []Message  `json:"messages"`
-	ID              string     `json:"id"`
-	Status          string     `json:"status"`
-	Error           string     `json:"error"`
-	NodeInfos       []NodeInfo `json:"nodes"`
+	CurrentMessages []Message       `json:"messages"`
+	ID              string          `json:"id"`
+	Status          string          `json:"status"`
+	Error           string          `json:"error"`
+	NodeInfos       []core.NodeInfo `json:"nodes"`
 }
 
 func auth(f func(w http.ResponseWriter, req *http.Request)) func(w http.ResponseWriter, req *http.Request) {
@@ -74,8 +73,9 @@ func logout(w http.ResponseWriter, req *http.Request) {
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
+	nodeManager := core.GetNodeManager()
 	data := map[string]interface{}{
-		"iplist": nodeManager.IPList,
+		"agents": nodeManager.Agents(),
 	}
 	r := render.New(render.Options{})
 	r.HTML(w, http.StatusOK, "index", data)
@@ -84,17 +84,17 @@ func index(w http.ResponseWriter, req *http.Request) {
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	config := core.GetGlobalConfig()
-	log.Info("receive new query job")
-	if config.Status != core.StatusStopped {
+	if config.JobConfig.Status != core.StatusStopped {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error:  "job is already started",
-			ID:     config.ID,
+			ID:     config.JobID,
 			Status: config.GetCurrentJobStatusString(),
 		})
 		return
 	}
+	job := core.JobConfig{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&config)
+	err := decoder.Decode(&job)
 	if err != nil {
 		log.Errorf("decode configuration info fail: %s", err.Error())
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
@@ -102,21 +102,27 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
-	log.Infof("%+v", config)
-	err = config.ValidateConfiguration()
+	err = job.ValidateJobConfiguration()
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error: err.Error(),
 		})
 		return
 	}
+	config.JobConfig = &job
+
 	if config.IsMaster == true {
-		core.GetDBHandler().CreateDNSQuery(config)
-		go nodeManager.Call(Start, config)
+		nodeManager := core.GetNodeManager()
+		err := core.GetDBHandler().CreateDNSQuery(config)
+		if err != nil {
+			log.Errorf("save query histroy fail:%s", err)
+		}
+		go nodeManager.Call(core.Start, job)
 	}
+
 	go core.GenTrafficFromConfig(config)
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.ID,
+		ID:     config.JobID,
 		Status: config.GetCurrentJobStatusString(),
 	})
 }
@@ -137,17 +143,19 @@ func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if config.IsMaster == true {
-		go nodeManager.Call(Kill, nil)
+		nodeManager := core.GetNodeManager()
+		go nodeManager.Call(core.Kill, nil)
 	}
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.ID,
+		ID:     config.JobID,
 		Status: config.GetCurrentJobStatusString(),
 	})
 }
 
 func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
-	config := core.GetGlobalConfig()
 	r := render.New(render.Options{})
+	nodeManager := core.GetNodeManager()
+	config := core.GetGlobalConfig()
 	data, err := MessagesHub.Get()
 	if err != nil {
 		r.JSON(w, http.StatusServiceUnavailable, JSONResponse{Error: err.Error()})
@@ -160,36 +168,42 @@ func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	nodeChannel := nodeManager.GetAllNodeStatus()
-	nodeInfomations := []NodeInfo{}
-	ticker := time.NewTicker(1 * time.Second)
-	for {
-		select {
-		case info := <-nodeChannel:
-			nodeInfomations = append(nodeInfomations, info)
-			if len(nodeInfomations) == nodeManager.Size() {
-				close(nodeChannel)
-				ticker.Stop()
-				goto RETURN
-			}
-		case <-ticker.C:
-			ticker.Stop()
-			goto RETURN
-		}
+	nodeInfos := []core.NodeInfo{}
+	for _, info := range nodeManager.NodeInfos {
+		nodeInfos = append(nodeInfos, info)
 	}
-RETURN:
 	r.JSON(w, http.StatusOK, JSONResponse{
 		CurrentMessages: messages,
-		ID:              config.ID,
+		ID:              config.JobID,
 		Status:          config.GetCurrentJobStatusString(),
-		NodeInfos:       nodeInfomations,
+		NodeInfos:       nodeInfos,
 	})
 }
 
-func addNode(w http.ResponseWriter, req *http.Request) {
+func updateNodeEnableStatus(w http.ResponseWriter, req *http.Request) {
+	var ipinfo IPWithPort
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
-	ipinfo := IPWithPort{}
+	nodeManager := core.GetNodeManager()
+	err := decoder.Decode(&ipinfo)
+	if err != nil {
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
+		return
+	}
+	log.Infof("%+v", ipinfo)
+	err = nodeManager.UpdateEnableStatusAgent(ipinfo.IPAddress, ipinfo.Port, ipinfo.Enable)
+	if err != nil {
+		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
+		return
+	}
+	r.JSON(w, http.StatusOK, JSONResponse{})
+}
+
+func addNode(w http.ResponseWriter, req *http.Request) {
+	var ipinfo IPWithPort
+	r := render.New(render.Options{})
+	decoder := json.NewDecoder(req.Body)
+	nodeManager := core.GetNodeManager()
 	err := decoder.Decode(&ipinfo)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
@@ -207,32 +221,11 @@ func addNode(w http.ResponseWriter, req *http.Request) {
 	r.JSON(w, http.StatusOK, JSONResponse{})
 }
 
-func pingNode(w http.ResponseWriter, req *http.Request) {
-	r := render.New(render.Options{})
-	decoder := json.NewDecoder(req.Body)
-	var ipinfo IPWithPort
-	err := decoder.Decode(&ipinfo)
-	if err != nil {
-		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
-		return
-	}
-	if err := ipinfo.Validate(); err != nil {
-		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
-		return
-	}
-	ip := ipinfo.IPAddress + ":" + ipinfo.Port
-	err = nodeManager.callPing(ip)
-	if err != nil {
-		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "ping node fail:" + err.Error()})
-		return
-	}
-	r.JSON(w, http.StatusOK, JSONResponse{})
-}
-
 func deleteNode(w http.ResponseWriter, req *http.Request) {
+	var ipinfo IPWithPort
 	r := render.New(render.Options{})
 	decoder := json.NewDecoder(req.Body)
-	var ipinfo IPWithPort
+	nodeManager := core.GetNodeManager()
 	err := decoder.Decode(&ipinfo)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "decode post data fail"})
@@ -242,7 +235,7 @@ func deleteNode(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: err.Error()})
 		return
 	}
-	err = nodeManager.Remove(ipinfo.IPAddress, ipinfo.Port)
+	err = nodeManager.RemoveNode(ipinfo.IPAddress, ipinfo.Port)
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{Error: "delete node fail:" + err.Error()})
 		return
@@ -276,7 +269,7 @@ func getQueryHistory(w http.ResponseWriter, req *http.Request) {
 func NewServer() error {
 	config := core.GetGlobalConfig()
 	key := []byte(config.AppSecrect)
-	nodeManager = NewNodeManager(config)
+
 	store = sessions.NewCookieStore(key)
 	r := mux.NewRouter()
 	r.HandleFunc("/", auth(index)).Methods("GET")
@@ -284,8 +277,8 @@ func NewServer() error {
 	r.HandleFunc("/history", auth(getQueryHistory)).Methods("GET")
 	r.HandleFunc("/login", login(config)).Methods("GET", "POST")
 	r.HandleFunc("/nodes", auth(addNode)).Methods("POST")
+	r.HandleFunc("/update-node", auth(updateNodeEnableStatus)).Methods("POST")
 	r.HandleFunc("/nodes", auth(deleteNode)).Methods("DELETE")
-	r.HandleFunc("/ping", auth(pingNode)).Methods("POST")
 	r.HandleFunc("/start", auth(startDNSTraffic)).Methods("POST")
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
 	r.HandleFunc("/status", auth(getCurrentStatus)).Methods("GET")

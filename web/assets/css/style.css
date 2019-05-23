@@ -231,22 +231,17 @@ body {
     border-bottom: 1px solid #dddddd1f!important;
 }
 
-.small-delete-button {
+.function-btn{
     border-radius: 0px;
     font-size: .5em;
     color: white;
     line-height: 1;
     padding: 6px 10px;
-    background: brown;
+    background:#009277 ;
 }
-
-.small-ping-button {
-    border-radius: 0px;
-    font-size: .5em;
+.warning-btn{
+    background: brown;
     color: white;
-    line-height: 1;
-    padding: 6px 10px;
-    background: #009277;
 }
 
 
@@ -459,6 +454,10 @@ body {
 .ping-success,
 .running-success{
     font-size: 1.5em;color:#1ff300;
+}
+.ping-fail{
+    font-size: 1.5em;
+    color: gray;
 }
 /* history box */
 

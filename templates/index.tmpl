@@ -110,22 +110,22 @@
                             <div class="item">
                                 <label class="theme-label">EDNS v0</label>
                                     <label class="radio-container">Enable
-                                    <input type="radio" checked="checked" value="true" name="edns_enable">
+                                    <input type="radio" value=true name="edns_enable">
                                     <span class="checkmark"></span>
                                     </label>
                                     <label class="radio-container">Disable
-                                    <input type="radio" value="false" name="edns_enable">
-                                    <span class="checkmark"></span>
+                                        <input type="radio" checked="checked" value=false name="edns_enable">
+                                        <span class="checkmark"></span>
                                     </label>
                             </div>
                             <div class="item">
                                 <label class="theme-label">DNSSEC</label>
                                     <label class="radio-container">Enable
-                                    <input type="radio" checked="checked" value="true" name="dnssec_enable">
+                                    <input type="radio" value=true name="dnssec_enable">
                                     <span class="checkmark"></span>
                                     </label>
                                     <label class="radio-container">Disable
-                                    <input type="radio" value="false" name="dnssec_enable">
+                                    <input type="radio"  checked="checked" value=false name="dnssec_enable">
                                     <span class="checkmark"></span>
                                     </label>
                                 
@@ -218,26 +218,49 @@
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>Ping</th>
+                                    <th>Heartbeat</th>
+                                    <th>Enabled</th>
                                     <th>Running</th>
                                     <th>Function</th>
                                 </tr>
                             </thead>
                             <tbody class="agent-list">
-                                {{with .iplist}} {{ range $key,$value := .}}
+                                {{with .agents}} {{ range $key,$value := .}}
                                 <tr>
                                     <td>
-                                        <i class="fa fa-hdd-o" aria-hidden="true"></i> {{$value}}</td>
-                                    <td class="agent-ping" data-item="{{$value}}">
-                                        <i class="fa fa-2x fa-check-circle-o ping-success" aria-hidden="true"></i>
+                                        <i class="fa fa-hdd-o" aria-hidden="true"></i> 
+                                        {{$value.ConnectionInfo}}
                                     </td>
-                                    <td class="agent-running" data-item="{{$value}}">
+                                    {{if $value.Live }}
+                                    <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                        <i class="fa fa-2x fa-heartbeat ping-success" aria-hidden="true"></i>
+                                    </td>
+                                    {{ else }}
+                                     <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                        <i class="fa fa-2x fa-heartbeat ping-fail" aria-hidden="true"></i>
+                                    </td>
+                                    {{ end }}
+                                    {{if $value.Enable }}
+                                    <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                        <i class="fa fa-2x fa-check-square-o ping-success" aria-hidden="true"></i>
+                                    </td>
+                                    {{ else }}
+                                     <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                        <i class="fa fa-2x fa-ban ping-fail" aria-hidden="true"></i>
+                                    </td>
+                                    {{ end }}
+                                    <td class="agent-running" data-item="{{$value.ConnectionInfo}}">
                                         <i class="fa fa-2x fa-spinner fa-pulse running-success hide" aria-hidden="true"></i>
                                     </td>
                                     <td>
-                                        <button class="btn small-ping-button" data-item="{{$value}}">
-                                            <i class="fa fa-handshake-o" aria-hidden="true"></i> Ping</button>
-                                        <button class="btn small-delete-button" data-item="{{$value}}">
+                                        {{ if $value.Enable }}
+                                        <button class="btn function-btn" id="disable-agent" data-item="{{$value.ConnectionInfo}}">
+                                            <i class="fa fa-eye-slash" aria-hidden="true"></i> Disable</button>
+                                        {{ else }}
+                                        <button class="btn function-btn" id="enable-agent" data-item="{{$value.ConnectionInfo}}">
+                                            <i class="fa fa-eye-slash" aria-hidden="true"></i> Enable </button>
+                                        {{ end }}
+                                        <button class="btn function-btn warning-btn" id="delete-agent" data-item="{{$value.ConnectionInfo}}">
                                             <i class="fa fa-trash" aria-hidden="true"></i> Delete</button>
                                     </td>
                                 </tr>

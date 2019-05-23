@@ -12,64 +12,132 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+// Default value for benchmark
+const (
+	DefaultPort         = "53"
+	DefaultRandomLength = 0
+	DefaultQPS          = 100
+)
+
 func init() {
 	govalidator.SetFieldsRequiredByDefault(true)
 }
 
-// Configuration define all config for this app
-type Configuration struct {
-	sync.RWMutex       `json:"-" valid:"-"`
-	IsMaster           bool           `json:"-" valid:"-"`
-	Master             string         `json:"master" valid:"ip,optional"`
-	Duration           CustomDuration `json:"duration" valid:"-"`
-	QPS                int            `json:"qps" valid:"-"`
-	Server             string         `json:"server" valid:"ip"`
-	Port               string         `json:"port" valid:"port"`
-	Domain             string         `json:"domain" valid:"-"`
-	EnableEDNS         string         `json:"edns_enable" valid:"-"`
-	EnableDNSSEC       string         `json:"dnssec_enable" valid:"-"`
-	DomainRandomLength int            `json:"domain_random_length" valid:"-"`
-	QueryType          string         `json:"query_type" valid:"-"`
-	HTTPServer         string         `json:"web" valid:"-"`
-	AgentPort          string         `json:"agent_port" valid:"port,optional"`
-	User               string         `json:"-" valid:"-"`
-	Password           string         `json:"-" valid:"-"`
-	AppSecrect         string         `json:"-" valid:"-"`
-	// For current job information
-	ID     string `json:"id" valid:"uuid,optional"`
-	Status uint32 `json:"-" valid:"-"`
+// AppConfig hold the configration from ini file
+type AppConfig struct {
+	User              string
+	Password          string
+	AppSecrect        string
+	HTTPServer        string
+	ConfigFileName    string
+	ConfigFileHandler *ini.File
+}
 
-	configFileName    string
-	configFileHandler *ini.File
+// LoadAppConfigurationFromFile read a appConfig.ini file from local file system
+// and return the AppConfig object
+func LoadAppConfigurationFromFile(filename string) (*AppConfig, error) {
+	appConfig := AppConfig{}
+	if strings.HasSuffix(filename, ".ini") == false {
+		return nil, errors.New("Configuration file must be .ini file type")
+	}
+	cfg, err := ini.Load(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Configuration file load error:%s", err.Error())
+	}
+	appConfigSectionApp, err := cfg.GetSection("App")
+	if err != nil {
+		return nil, fmt.Errorf("Load app appConfiguration file section [App] error:%s", err.Error())
+	}
+	if appConfigSectionApp.HasKey("user") {
+		appConfig.User = appConfigSectionApp.Key("user").String()
+	}
+	if appConfigSectionApp.HasKey("password") {
+		appConfig.Password = appConfigSectionApp.Key("password").String()
+	}
+	if appConfigSectionApp.HasKey("app_secrect") {
+		appConfig.AppSecrect = appConfigSectionApp.Key("app_secrect").String()
+	}
+	if appConfigSectionApp.HasKey("http_server") {
+		appConfig.HTTPServer = appConfigSectionApp.Key("http_server").String()
+	}
+	return &appConfig, nil
+}
+
+// JobConfig hold the job appConfiguration
+type JobConfig struct {
+	JobID              string `json:"job_id" valid:"uuid,optional"`
+	Status             uint32 `json:"-" valid:"-"`
+	Duration           string `json:"duration" valid:"-"`
+	QPS                int    `json:"qps" valid:"-"`
+	Server             string `json:"server" valid:"ip,optional"`
+	Port               string `json:"port" valid:"port,optional"`
+	Domain             string `json:"domain" valid:"-"`
+	EnableEDNS         string `json:"edns_enable" valid:"-"`
+	EnableDNSSEC       string `json:"dnssec_enable" valid:"-"`
+	DomainRandomLength int    `json:"domain_random_length" valid:"-"`
+	QueryType          string `json:"query_type" valid:"-"`
+}
+
+//NewJobConfig create a init job for appConfigration
+func NewJobConfig() *JobConfig {
+	return &JobConfig{
+		Status:             StatusStopped,
+		Port:               DefaultPort,
+		QPS:                DefaultQPS,
+		DomainRandomLength: DefaultRandomLength,
+	}
+}
+
+// ValidateJobConfiguration validate the job config
+func (jobConfig *JobConfig) ValidateJobConfiguration() error {
+	_, err := govalidator.ValidateStruct(jobConfig)
+	if err != nil {
+		return err
+	}
+	if jobConfig.QPS < 0 || jobConfig.DomainRandomLength < 0 {
+		return errors.New("number can't set to nagetive")
+	}
+	if jobConfig.JobID == "" {
+		id, _ := uuid.NewV4()
+		jobConfig.JobID = (*id).String()
+	}
+	return nil
+}
+
+// Configuration define all appConfig for this app
+type Configuration struct {
+	sync.RWMutex
+	*JobConfig `json:"job"`
+	*AppConfig `json:"-"`
+	IsMaster   bool `json:"-"`
 }
 
 var globalConfig *Configuration
 
-// NewConfigurationFromFile load the configuration and save to global variable
+// NewConfigurationFromFile load the appConfiguration and save to global variable
 func NewConfigurationFromFile(file string) (*Configuration, error) {
-
-	config := &Configuration{
-		configFileName: file,
-		IsMaster:       true,
-		Status:         StatusStopped,
-	}
-	err := config.LoadConfigurationFromIniFile(file)
+	appConfig, err := LoadAppConfigurationFromFile(file)
 	if err != nil {
 		return nil, err
 	}
-	if err = config.ValidateConfiguration(); err != nil {
+	config := &Configuration{
+		AppConfig: appConfig,
+		JobConfig: NewJobConfig(),
+		IsMaster:  true,
+	}
+	if err = config.ValidateJobConfiguration(); err != nil {
 		return nil, err
 	}
 	globalConfig = config
 	return config, nil
 }
 
-// GetGlobalConfig return current configuration
+// GetGlobalConfig return current appConfiguration
 func GetGlobalConfig() *Configuration {
 	if globalConfig == nil {
 		globalConfig = &Configuration{
-			IsMaster: false,
-			Status:   StatusStopped,
+			JobConfig: NewJobConfig(),
+			IsMaster:  false,
 		}
 	}
 	return globalConfig
@@ -79,7 +147,7 @@ func GetGlobalConfig() *Configuration {
 func (config *Configuration) GetCurrentJobStatus() uint32 {
 	config.RLock()
 	defer config.RUnlock()
-	return config.Status
+	return config.JobConfig.Status
 }
 
 // GetCurrentJobStatusString return the readable string
@@ -95,87 +163,4 @@ func (config *Configuration) SetCurrentJobStatus(status uint32) error {
 	defer config.Unlock()
 	config.Status = status
 	return nil
-}
-
-// ValidateConfiguration will check all setting and if no error accure return nil
-func (config *Configuration) ValidateConfiguration() error {
-	_, err := govalidator.ValidateStruct(config)
-	if err != nil {
-		return err
-	}
-	if config.QPS <= 0 || config.DomainRandomLength < 0 {
-		return errors.New("number can't set to nagetive")
-	}
-	if config.ID == "" {
-		id, _ := uuid.NewV4()
-		config.ID = (*id).String()
-	}
-	return nil
-}
-
-// LoadConfigurationFromIniFile read a config.ini file from local file system
-// and return the configuration object
-func (config *Configuration) LoadConfigurationFromIniFile(filename string) (err error) {
-	if strings.HasSuffix(filename, ".ini") == false {
-		return errors.New("Configuration file must be .ini file type")
-	}
-	cfg, err := ini.Load(filename)
-	if err != nil {
-		return fmt.Errorf("Configuration file load error:%s", err.Error())
-	}
-	config.configFileHandler = cfg
-	configSectionApp, err := cfg.GetSection("App")
-	if err != nil {
-		return fmt.Errorf("Configuration file load section [App] error:%s", err.Error())
-	}
-	if configSectionApp.HasKey("user") {
-		config.User = configSectionApp.Key("user").String()
-	}
-	if configSectionApp.HasKey("password") {
-		config.Password = configSectionApp.Key("password").String()
-	}
-	if configSectionApp.HasKey("app_secrect") {
-		config.AppSecrect = configSectionApp.Key("app_secrect").String()
-	}
-	if configSectionApp.HasKey("control_master") {
-		config.Master = configSectionApp.Key("master").String()
-	}
-	if configSectionApp.HasKey("agent_port") {
-		config.AgentPort = configSectionApp.Key("agent_port").String()
-	}
-	if configSectionApp.HasKey("http_server") {
-		config.HTTPServer = configSectionApp.Key("http_server").String()
-	}
-	configSectionQuery, err := cfg.GetSection("Query")
-	if err != nil {
-		return fmt.Errorf("Configuration file load section [Query] error:%s", err.Error())
-	}
-	if configSectionQuery.HasKey("duration") {
-		duration, err := configSectionQuery.Key("duration").Duration()
-		if err != nil {
-			return fmt.Errorf("Configuration file load section [Query] error:%s", err.Error())
-		}
-		config.Duration = CustomDuration{
-			Duration: duration,
-		}
-	}
-	if configSectionQuery.HasKey("qps") {
-		config.QPS = configSectionQuery.Key("qps").MustInt()
-	}
-	if configSectionQuery.HasKey("server") {
-		config.Server = configSectionQuery.Key("server").String()
-	}
-	if configSectionQuery.HasKey("port") {
-		config.Port = configSectionQuery.Key("port").String()
-	}
-	if configSectionQuery.HasKey("domain") {
-		config.Domain = configSectionQuery.Key("domain").String()
-	}
-	if configSectionQuery.HasKey("randomlen") {
-		config.DomainRandomLength = configSectionQuery.Key("server").MustInt()
-	}
-	if configSectionQuery.HasKey("query_type") {
-		config.QueryType = configSectionQuery.Key("query_type").String()
-	}
-	return
 }

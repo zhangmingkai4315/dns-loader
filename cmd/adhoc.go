@@ -38,11 +38,11 @@ var adhocCmd = &cobra.Command{
 		config.Domain = domain
 		config.DomainRandomLength = random
 		config.QPS = qps
-		config.Duration = core.CustomDuration{Duration: duration}
+		config.Duration = duration.String()
 		config.Server = server
 		config.Port = port
 		config.QueryType = querytype
-		if err := config.ValidateConfiguration(); err != nil {
+		if err := config.ValidateJobConfiguration(); err != nil {
 			log.Panicf("argument validation error:%s", err)
 		}
 		core.GenTrafficFromConfig(config)

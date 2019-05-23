@@ -10,8 +10,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "dnsloader",
 	Short: "dnsloader is a fast dns packets generator and easy to scale in multiple server",
-	Long: `
-Description: dnsloader is a fast and flexible dns packets generator build with golang, complete documentation is available at http://mikezhang.cc`,
+	Long:  "Description: dnsloader is a fast and flexible dns packets generator build with golang, complete documentation is available at https://github.com/zhangmingkai4315/dns-loader",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},

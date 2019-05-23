@@ -13,6 +13,7 @@ function getFormData($form) {
     var result = {}
     $.map(formArray, function (n, i) {
         result[n["name"]] = n["value"]
+        console.log(n)
     })
     return result
 }
@@ -40,7 +41,6 @@ function validateConfig(result) {
         toastr.error('Port number should be in [0-65535]', 'Port Error')
         return false
     }
-
     result["qps"] = isNaN(parseInt(result["qps"])) ? 100 : parseInt(result["qps"])
     if (result["qps"] <= 0) {
         toastr.error('QPS number should be larger than 0', 'QPS Error')
@@ -218,9 +218,11 @@ $(document).ready(function () {
     });
     $(".config-submit").click(function () {
         var result = getFormData($('form[name="config"]'))
+        debugger
         if (validateConfig(result) === false) {
             return
         }
+        debugger
         $.ajax({
             type: "POST",
             url: "/start",
@@ -241,7 +243,7 @@ $(document).ready(function () {
             contentType: "application/json"
         })
     })
-    $(".small-delete-button").click(function () {
+    $("#delete-agent").click(function () {
         var ipWithPort = $(this).attr("data-item")
         var data = {
             "ipaddress": ipWithPort.split(":")[0],
@@ -265,7 +267,39 @@ $(document).ready(function () {
             contentType: "application/json"
         })
     })
-    
+    function updateAgentEnableStatus(ip,port,enable){
+        var data = {
+            "ipaddress": ip,
+            "port": port,
+            "enable":enable
+        }
+        $.ajax({
+            type: "POST",
+            url: "/update-node",
+            data: JSON.stringify(data),
+            success: function (data) {
+                toastr.info("update success")
+                window.location.reload()
+            },
+            error: function (err) {
+                if (err && err.responseJSON && err.responseJSON.error) {
+                    toastr.error(err.responseJSON.error,"update fail")
+                } else {
+                    toastr.error("update fail","Sever Fail")
+                }
+            },
+            contentType: "application/json"
+        })
+    }
+    $("#disable-agent").click(function () {
+        var ipWithPort = $(this).attr("data-item").split(":")
+
+        updateAgentEnableStatus(ipWithPort[0],ipWithPort[1],false)
+    })
+    $("#enable-agent").click(function(){
+        var ipWithPort = $(this).attr("data-item").split(":")
+        updateAgentEnableStatus(ipWithPort[0],ipWithPort[1],true)
+    })
     $("#show-history").click(function () {
         var isHide = $(".history-box").hasClass("hide")
         if(isHide === true){
@@ -278,10 +312,19 @@ $(document).ready(function () {
 
     function updateConfigurationFromData(data){
         var keys = Object.keys(data)
+        console.log(data)
         for(var i = 0; i<keys.length; i++){
-            var inputSelector = "form[name='config'] input[name='"+keys[i]+"'"
-            if($(inputSelector).length!==0){
-                $(inputSelector).val(data[keys[i]])
+            var inputSelector = "form[name='config'] input[name='"+keys[i]+"']"
+            if($(inputSelector).length===1){
+                    $(inputSelector).val(data[keys[i]])
+                    continue
+            }
+            if($(inputSelector).length===2 && $(inputSelector).is(':radio')){
+                if(data[keys[i]]==="true"){
+                    $(inputSelector).eq(0).attr("checked","checked")
+                }else{
+                    $(inputSelector).eq(1).attr("checked","checked")
+                }
             }
         }
     }
@@ -383,7 +426,7 @@ $(document).ready(function () {
     })
     function updateAgentStatus(nodes){
         nodes.map(function(node){
-            var nodeInfo = node.ipaddress + ":" + node.port;
+            var nodeInfo = node.ip + ":" + node.port;
             if(node.status === "running"){
                 $(".agent-running[data-item='"+nodeInfo+"']").find("i.running-success").removeClass("hide")
             }else{

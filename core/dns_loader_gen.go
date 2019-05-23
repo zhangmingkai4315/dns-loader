@@ -163,24 +163,30 @@ func NewDNSLoaderGenerator(param GeneratorParam) (Generator, error) {
 
 // GenTrafficFromConfig function will do traffic generate job
 // from configuration
-func GenTrafficFromConfig(config *Configuration) {
+func GenTrafficFromConfig(config *Configuration) error {
 	dnsclient, err := NewDNSClientWithConfig(config)
 	if err != nil {
-		log.Panicf("%s", err.Error())
+		log.Errorf("create dns client fail:%s", err)
+		return err
 	}
-	log.Infof("current dnsloader server setting is %s:%s",
-		dnsclient.Config.Server, dnsclient.Config.Port)
+	duration, _ := time.ParseDuration(config.JobConfig.Duration)
+	if err != nil {
+		log.Errorf("parse user input duration fail :%s", err)
+		return err
+	}
 	param := GeneratorParam{
 		Caller:   dnsclient,
 		Timeout:  1000 * time.Millisecond,
 		QPS:      uint32(config.QPS),
-		Duration: config.Duration.Duration,
+		Duration: duration,
 	}
 	log.Infof("initialize load %s", param.Info())
 	gen, err := NewDNSLoaderGenerator(param)
 	if err != nil {
-		log.Panicf("load generator initialization fail :%s", err)
+		log.Errorf("load generator initialization fail :%s", err)
+		return err
 	}
 	GloablGenerator = gen
 	gen.Start()
+	return nil
 }
