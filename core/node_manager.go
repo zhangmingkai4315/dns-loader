@@ -221,6 +221,13 @@ func (manager *NodeManager) callKill(agent Agent) (err error) {
 	return nil
 }
 
+// agentStatusJSONResponse for decode status query from other agent response
+type agentStatusJSONResponse struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Error  string `json:"error"`
+}
+
 func (manager *NodeManager) callStatus(agent Agent, checkOnly bool) error {
 	nodeInfo := NodeInfo{
 		Agent: agent,
@@ -252,7 +259,7 @@ func (manager *NodeManager) callStatus(agent Agent, checkOnly bool) error {
 	}
 
 	defer response.Body.Close()
-	infoData := &AgentStatusJSONResponse{}
+	infoData := &agentStatusJSONResponse{}
 	json.NewDecoder(response.Body).Decode(infoData)
 	nodeInfo.Status = infoData.Status
 	nodeInfo.JobID = infoData.ID

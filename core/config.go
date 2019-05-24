@@ -17,6 +17,7 @@ const (
 	DefaultPort         = "53"
 	DefaultRandomLength = 0
 	DefaultQPS          = 100
+	DefaultMaxQuery     = 0
 )
 
 func init() {
@@ -67,7 +68,8 @@ func LoadAppConfigurationFromFile(filename string) (*AppConfig, error) {
 type JobConfig struct {
 	JobID              string `json:"job_id" valid:"uuid,optional"`
 	Duration           string `json:"duration" valid:"-"`
-	QPS                int    `json:"qps" valid:"-"`
+	QPS                uint32 `json:"qps" valid:"-"`
+	MaxQuery           uint64 `json:"max_query" valid:"-"`
 	Server             string `json:"server" valid:"ip,optional"`
 	Port               string `json:"port" valid:"port,optional"`
 	Domain             string `json:"domain" valid:"-"`
@@ -83,6 +85,7 @@ func NewJobConfig() *JobConfig {
 		Port:               DefaultPort,
 		QPS:                DefaultQPS,
 		DomainRandomLength: DefaultRandomLength,
+		MaxQuery:           DefaultMaxQuery,
 	}
 }
 
@@ -92,8 +95,14 @@ func (jobConfig *JobConfig) ValidateJobConfiguration() error {
 	if err != nil {
 		return err
 	}
-	if jobConfig.QPS < 0 || jobConfig.DomainRandomLength < 0 {
-		return errors.New("number can't set to nagetive")
+	if jobConfig.QPS < 0 {
+		return errors.New("qps number can't set to nagetive")
+	}
+	if jobConfig.DomainRandomLength < 0 {
+		return errors.New("domain random length can't set to nagetive")
+	}
+	if jobConfig.MaxQuery < 0 {
+		return errors.New("maximum number of queries can't set to nagetive")
 	}
 	if jobConfig.JobID == "" {
 		id, _ := uuid.NewV4()

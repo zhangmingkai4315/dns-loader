@@ -12,12 +12,13 @@ import (
 )
 
 //GloablGenerator define global control object
-var GloablGenerator Generator
+var GloablGenerator LoadManager
 
-type myDNSLoaderGenerator struct {
-	caller     Caller
+type dnsLoaderGen struct {
+	caller     LoadCaller
 	timeout    time.Duration
 	qps        uint32
+	maxquery   uint64
 	status     uint32
 	duration   time.Duration
 	ctx        context.Context
@@ -28,108 +29,97 @@ type myDNSLoaderGenerator struct {
 	result     map[uint8]uint64
 }
 
-func (mlg *myDNSLoaderGenerator) Start() bool {
-	log.Info("starting dns loader generator")
-	mlg.ctx, mlg.cancelFunc = context.WithTimeout(context.Background(), mlg.duration)
-	mlg.callCount = 0
-	currentStatus := mlg.Status()
+func (dlg *dnsLoaderGen) Start() bool {
+	log.Info("prepare dns loader generator")
+	dlg.ctx, dlg.cancelFunc = context.WithTimeout(context.Background(), dlg.duration)
+	dlg.callCount = 0
+	currentStatus := dlg.Status()
 	if currentStatus != StatusStopped {
 		return false
 	}
-	atomic.StoreUint32(&mlg.status, StatusStart)
+	atomic.StoreUint32(&dlg.status, StatusStart)
 	config := GetGlobalConfig()
 	config.SetCurrentJobStatus(StatusStart)
-	if mlg.qps > 0 {
-		interval := time.Duration(1e9 / mlg.qps)
+	if dlg.qps > 0 {
+		interval := time.Duration(1e9 / dlg.qps)
 		log.Infof("setting throttle %v", interval)
 	}
-	atomic.StoreUint32(&mlg.status, StatusRunning)
+	atomic.StoreUint32(&dlg.status, StatusRunning)
 	config.SetCurrentJobStatus(StatusRunning)
 	log.Infoln("create new thread to receive dns data from server")
 	go func() {
 		// recive data from connections
 		b := make([]byte, 4)
-		dnsclient := mlg.caller.(*DNSClient)
+		dnsclient := dlg.caller.(*DNSClient)
 		for {
 			n, err := dnsclient.Conn.Read(b)
 			if err == nil && n > 0 {
 				code := b[3] & 0x0f
-				mlg.result[code] = mlg.result[code] + 1
+				dlg.result[code] = dlg.result[code] + 1
 			}
 		}
 	}()
 
 	var limiter ratelimit.Limiter
-	if mlg.qps > 0 {
-		limiter = ratelimit.New(int(mlg.qps))
+	if dlg.qps > 0 {
+		limiter = ratelimit.New(int(dlg.qps))
 	}
-	mlg.startTime = time.Now()
-	log.Printf("start push packets to dns server and will stop at %s later...", mlg.duration)
-	mlg.generatorLoad(limiter)
+	dlg.startTime = time.Now()
+	log.Printf("start push packets to dns server and will stop at %s later", dlg.duration)
+	dlg.generatorLoad(limiter)
 	return true
 }
 
-func (mlg *myDNSLoaderGenerator) prepareStop(err error) {
+func (dlg *dnsLoaderGen) prepareStop(err error) {
 	log.Printf("prepare to stop load test [%s]", err)
-	atomic.StoreUint32(&mlg.status, StatusStopping)
+	atomic.StoreUint32(&dlg.status, StatusStopping)
 	config := GetGlobalConfig()
 	config.SetCurrentJobStatus(StatusStopping)
 	log.Infoln("doing calculation work")
-	runningTime := time.Since(mlg.startTime)
-	managerCounter := mlg.CallCount()
+	runningTime := time.Since(dlg.startTime)
+	managerCounter := dlg.CallCount()
 	log.WithFields(log.Fields{"result": true}).Infof("total packets sum:%d", managerCounter)
 	log.WithFields(log.Fields{"result": true}).Infof("runing time %v", runningTime)
 	var counter uint64
-	for k, v := range mlg.result {
+	for k, v := range dlg.result {
 		counter = v + counter
-		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", dns.DNSRcodeReverse[k], v, float64(v*100)/float64(mlg.CallCount()))
+		log.WithFields(log.Fields{"result": true}).Infof("status %s:%d [%.2f]", dns.DNSRcodeReverse[k], v, float64(v*100)/float64(dlg.CallCount()))
 	}
 	var unknown uint64
 	if managerCounter > counter {
 		unknown = managerCounter - counter
 	}
-	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", unknown, float64(unknown*100)/float64(mlg.CallCount()))
-	atomic.StoreUint32(&mlg.status, StatusStopped)
+	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", unknown, float64(unknown*100)/float64(dlg.CallCount()))
+	atomic.StoreUint32(&dlg.status, StatusStopped)
 	config.SetCurrentJobStatus(StatusStopped)
 	log.Info("stop success!")
 }
 
-func (mlg *myDNSLoaderGenerator) sendNewRequest() {
-	defer func() {
-		if p := recover(); p != nil {
-			err, _ := interface{}(p).(error)
-			log.Println(err)
-		}
-	}()
-	rawRequest := mlg.caller.BuildReq()
-	mlg.caller.Call(rawRequest)
-}
-
-func (mlg *myDNSLoaderGenerator) generatorLoad(limiter ratelimit.Limiter) {
+func (dlg *dnsLoaderGen) generatorLoad(limiter ratelimit.Limiter) {
 	for {
 		select {
-		case <-mlg.ctx.Done():
-			mlg.prepareStop(mlg.ctx.Err())
+		case <-dlg.ctx.Done():
+			dlg.prepareStop(dlg.ctx.Err())
 			return
 		default:
 		}
 		limiter.Take()
-		rawRequest := mlg.caller.BuildReq()
-		mlg.caller.Call(rawRequest)
-		atomic.AddUint64(&mlg.callCount, 1)
+		rawRequest := dlg.caller.BuildReq()
+		dlg.caller.Call(rawRequest)
+		atomic.AddUint64(&dlg.callCount, 1)
 	}
 }
 
-func (mlg *myDNSLoaderGenerator) Stop() bool {
+func (dlg *dnsLoaderGen) Stop() bool {
 	if !atomic.CompareAndSwapUint32(
-		&mlg.status, StatusRunning, StatusStopping) {
+		&dlg.status, StatusRunning, StatusStopping) {
 		return false
 	}
 	config := GetGlobalConfig()
 	config.SetCurrentJobStatus(StatusStopping)
-	mlg.cancelFunc()
+	dlg.cancelFunc()
 	for {
-		if atomic.LoadUint32(&mlg.status) == StatusStopped {
+		if atomic.LoadUint32(&dlg.status) == StatusStopped {
 			break
 		}
 		time.Sleep(time.Microsecond)
@@ -137,28 +127,28 @@ func (mlg *myDNSLoaderGenerator) Stop() bool {
 	return true
 }
 
-func (mlg *myDNSLoaderGenerator) Status() uint32 {
-	return atomic.LoadUint32(&mlg.status)
+func (dlg *dnsLoaderGen) Status() uint32 {
+	return atomic.LoadUint32(&dlg.status)
 }
-func (mlg *myDNSLoaderGenerator) CallCount() uint64 {
-	return atomic.LoadUint64(&mlg.callCount)
+func (dlg *dnsLoaderGen) CallCount() uint64 {
+	return atomic.LoadUint64(&dlg.callCount)
 }
 
 // NewDNSLoaderGenerator will return a new instance of generator
 // using param from GeneratorParam
-func NewDNSLoaderGenerator(param GeneratorParam) (Generator, error) {
+func NewDNSLoaderGenerator(param LoadParams) (LoadManager, error) {
 	if err := param.ValidCheck(); err != nil {
 		return nil, err
 	}
-	mlg := &myDNSLoaderGenerator{
+	dlg := &dnsLoaderGen{
 		caller:   param.Caller,
 		timeout:  param.Timeout,
 		qps:      param.QPS,
 		duration: param.Duration,
 		status:   StatusStopped,
 	}
-	mlg.result = make(map[uint8]uint64)
-	return mlg, nil
+	dlg.result = make(map[uint8]uint64)
+	return dlg, nil
 }
 
 // GenTrafficFromConfig function will do traffic generate job
@@ -174,10 +164,11 @@ func GenTrafficFromConfig(config *Configuration) error {
 		log.Errorf("parse user input duration fail :%s", err)
 		return err
 	}
-	param := GeneratorParam{
+	param := LoadParams{
 		Caller:   dnsclient,
 		Timeout:  1000 * time.Millisecond,
-		QPS:      uint32(config.QPS),
+		QPS:      config.QPS,
+		Max:      config.MaxQuery,
 		Duration: duration,
 	}
 	log.Infof("initialize load %s", param.Info())
