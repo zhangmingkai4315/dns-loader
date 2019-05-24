@@ -66,7 +66,6 @@ func LoadAppConfigurationFromFile(filename string) (*AppConfig, error) {
 // JobConfig hold the job appConfiguration
 type JobConfig struct {
 	JobID              string `json:"job_id" valid:"uuid,optional"`
-	Status             uint32 `json:"-" valid:"-"`
 	Duration           string `json:"duration" valid:"-"`
 	QPS                int    `json:"qps" valid:"-"`
 	Server             string `json:"server" valid:"ip,optional"`
@@ -81,7 +80,6 @@ type JobConfig struct {
 //NewJobConfig create a init job for appConfigration
 func NewJobConfig() *JobConfig {
 	return &JobConfig{
-		Status:             StatusStopped,
 		Port:               DefaultPort,
 		QPS:                DefaultQPS,
 		DomainRandomLength: DefaultRandomLength,
@@ -107,9 +105,10 @@ func (jobConfig *JobConfig) ValidateJobConfiguration() error {
 // Configuration define all appConfig for this app
 type Configuration struct {
 	sync.RWMutex
-	*JobConfig `json:"job"`
-	*AppConfig `json:"-"`
-	IsMaster   bool `json:"-"`
+	*JobConfig
+	*AppConfig
+	Status   uint32
+	IsMaster bool
 }
 
 var globalConfig *Configuration
@@ -124,6 +123,7 @@ func NewConfigurationFromFile(file string) (*Configuration, error) {
 		AppConfig: appConfig,
 		JobConfig: NewJobConfig(),
 		IsMaster:  true,
+		Status:    StatusStopped,
 	}
 	if err = config.ValidateJobConfiguration(); err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func GetGlobalConfig() *Configuration {
 func (config *Configuration) GetCurrentJobStatus() uint32 {
 	config.RLock()
 	defer config.RUnlock()
-	return config.JobConfig.Status
+	return config.Status
 }
 
 // GetCurrentJobStatusString return the readable string

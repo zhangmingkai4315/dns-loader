@@ -64,7 +64,7 @@ func NewNodeManager() *NodeManager {
 }
 
 func (manager *NodeManager) statusUpdate(status NodeInfo) {
-	statusKey := status.ConnectionInfo()
+	statusKey := status.IPAddrWithPort()
 	oldStatus, ok := manager.NodeInfos[statusKey]
 	if ok == false {
 		manager.NodeInfos[statusKey] = status
@@ -91,13 +91,13 @@ func (manager *NodeManager) SyncDBForAgents() error {
 		return err
 	}
 	for _, agent := range agents {
-		oldStatus, ok := manager.NodeInfos[agent.ConnectionInfo()]
+		oldStatus, ok := manager.NodeInfos[agent.IPAddrWithPort()]
 		if ok == true {
 			oldStatus.Agent = agent
-			manager.NodeInfos[agent.ConnectionInfo()] = oldStatus
+			manager.NodeInfos[agent.IPAddrWithPort()] = oldStatus
 			continue
 		}
-		manager.NodeInfos[agent.ConnectionInfo()] = NodeInfo{Agent: agent}
+		manager.NodeInfos[agent.IPAddrWithPort()] = NodeInfo{Agent: agent}
 	}
 	return nil
 }
@@ -113,7 +113,7 @@ func (manager *NodeManager) AddNode(ip string, port string) error {
 	// err = GetDBHandler().AddAgent(ip, port)
 	err = manager.DB.First(&agent).Error
 	if err == nil {
-		return fmt.Errorf("%s already exist", agent.ConnectionInfo())
+		return fmt.Errorf("%s already exist", agent.IPAddrWithPort())
 	}
 	if !gorm.IsRecordNotFoundError(err) {
 		return fmt.Errorf("save new agent fail: %s", err)
@@ -151,25 +151,24 @@ func (manager *NodeManager) RemoveNode(ip string, port string) error {
 
 // Call function will send data to all agents
 func (manager *NodeManager) Call(event Event, data interface{}) error {
-	log.Infof("manager get new event[id=%d] called ", event)
 	for _, nodeInfo := range manager.NodeInfos {
 		agent := nodeInfo.Agent
-		if agent.Enable == false {
-			log.Infof("skip agent :%s because it not enabled", agent.ConnectionInfo())
+		if event != Status && agent.Enable == false {
+			log.Infof("skip agent :%s because it not enabled", agent.IPAddrWithPort())
 			continue
 		}
 		switch event {
 		case Start:
-			log.Infof("send job infomation to agent :%s", agent.ConnectionInfo())
+			log.Infof("send job infomation to agent :%s", agent.IPAddrWithPort())
 			err := manager.callStart(agent, data)
 			if err != nil {
-				log.Errorf("send job infomation to agent : %s fail:%s", agent.ConnectionInfo(), err.Error())
+				log.Errorf("send job infomation to agent : %s fail:%s", agent.IPAddrWithPort(), err.Error())
 			}
 		case Kill:
-			log.Printf("send kill signal to agent :%s", agent.ConnectionInfo())
+			log.Printf("send kill signal to agent :%s", agent.IPAddrWithPort())
 			err := manager.callKill(agent)
 			if err != nil {
-				log.Errorf("send kill job command to agent : %s fail:%s", agent.ConnectionInfo(), err.Error())
+				log.Errorf("send kill job command to agent : %s fail:%s", agent.IPAddrWithPort(), err.Error())
 			}
 		case Status:
 			manager.callStatus(agent, false)
@@ -185,7 +184,7 @@ func (manager *NodeManager) callStart(agent Agent, data interface{}) (err error)
 			log.Printf("panic for agent start job call[%s]\n", r)
 		}
 	}()
-	var ip = agent.ConnectionInfo()
+	var ip = agent.IPAddrWithPort()
 	var netClient = &http.Client{
 		Timeout: time.Second * 5,
 	}
@@ -244,7 +243,7 @@ func (manager *NodeManager) callStatus(agent Agent, checkOnly bool) error {
 	if err != nil || response.StatusCode != 200 {
 		nodeInfo.Error = err.Error()
 		nodeInfo.Live = false
-		log.Errorf("get status from [%s] fail:%s", agent.ConnectionInfo(), err)
+		log.Errorf("get status from [%s] fail:%s", agent.IPAddrWithPort(), err)
 		if checkOnly == true {
 			return err
 		}
@@ -281,7 +280,7 @@ func (manager *NodeManager) UpdateEnableStatusAgent(ip string, port string, enab
 	agent.Enable = enable
 	manager.DB.Save(&agent)
 	manager.SyncDBForAgents()
-	log.Infof("update enable status for %s to [%v]", agent.ConnectionInfo(), agent.Enable)
+	log.Infof("update enable status for %s to [%v]", agent.IPAddrWithPort(), agent.Enable)
 	return nil
 }
 
@@ -305,7 +304,7 @@ func (manager *NodeManager) UpdateLiveStatusAgent(agent Agent, live bool) error 
 		return fmt.Errorf("disable agent fail: %s", err)
 	}
 	agent.Live = live
-	log.Infof("update agent %s :live status to %v", agent.ConnectionInfo(), live)
+	log.Infof("update agent %s :live status to %v", agent.IPAddrWithPort(), live)
 	manager.DB.Save(&agent)
 	return nil
 }

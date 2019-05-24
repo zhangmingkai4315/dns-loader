@@ -17,8 +17,6 @@ type IPWithPort struct {
 	Enable    bool   `json:"enable" valid:"-"`
 }
 
-// NodeInfo for status check response
-
 // Validate if ip and port infomation is valid
 func (ipp *IPWithPort) Validate() error {
 	_, err := govalidator.ValidateStruct(ipp)

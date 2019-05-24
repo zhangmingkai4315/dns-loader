@@ -20,6 +20,6 @@ var agentCmd = &cobra.Command{
 }
 
 func init() {
-	agentCmd.PersistentFlags().StringVar(&agentHost, "host", "0.0.0.0", "ipaddress for start agent")
-	agentCmd.PersistentFlags().StringVar(&agentPort, "port", "8998", "port to listen")
+	agentCmd.Flags().StringVar(&agentHost, "host", "0.0.0.0", "ipaddress for start agent")
+	agentCmd.Flags().StringVar(&agentPort, "port", "8998", "port to listen")
 }

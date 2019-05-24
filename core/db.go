@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/gorm"
@@ -29,18 +28,8 @@ type Agent struct {
 	Enable bool   `json:"enable"`
 }
 
-// NewAgent create a new agent
-func NewAgent(ip, port string) *Agent {
-	id, _ := uuid.NewV4()
-	return &Agent{
-		UUID:   id.String(),
-		Live:   false,
-		Enable: true,
-	}
-}
-
-//ConnectionInfo return connect url
-func (agent Agent) ConnectionInfo() string {
+//IPAddrWithPort return connect ip and port combination
+func (agent Agent) IPAddrWithPort() string {
 	return agent.IP + ":" + agent.Port
 }
 
@@ -50,8 +39,8 @@ type DNSQuery struct {
 	JobConfig
 }
 
-// NewDatabaseFromFile create database from file
-func NewDatabaseFromFile(dbfile string) error {
+// NewDatabaseConnectionFromFile create database from file
+func NewDatabaseConnectionFromFile(dbfile string) error {
 	if _, err := os.Stat(dbfile); os.IsNotExist(err) {
 		dbfile, err := os.Create(dbfile)
 		if err != nil {

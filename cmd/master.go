@@ -30,8 +30,8 @@ var masterCmd = &cobra.Command{
 }
 
 func init() {
-	masterCmd.PersistentFlags().StringVar(&masterConfigFile, "config", "", "config file (default is $HOME/config.ini)")
-	masterCmd.PersistentFlags().StringVar(&dbFile, "dbfile", "app.db", "database file for dns loader app(create automatic)")
+	masterCmd.Flags().StringVar(&masterConfigFile, "config", "", "config file (default is $HOME/config.ini)")
+	masterCmd.Flags().StringVar(&dbFile, "dbfile", "app.db", "database file for dns loader app(create automatic)")
 }
 
 func initMasterMode(cfgFile string, dbfile string) *core.Configuration {
@@ -48,7 +48,7 @@ func initMasterMode(cfgFile string, dbfile string) *core.Configuration {
 	if err != nil {
 		log.Fatalf("load config file %s error: %s", cfgFile, err)
 	}
-	err = core.NewDatabaseFromFile(dbfile)
+	err = core.NewDatabaseConnectionFromFile(dbfile)
 	if err != nil {
 		log.Fatalf("create database connection error: %s", err.Error())
 	}

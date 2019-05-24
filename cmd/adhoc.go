@@ -19,13 +19,13 @@ var (
 )
 
 func init() {
-	adhocCmd.PersistentFlags().DurationVarP(&duration, "duration", "D", time.Second*60, "send out dns traffic duration")
-	adhocCmd.PersistentFlags().IntVarP(&qps, "qps", "Q", 100, "qps for dns traffic")
-	adhocCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "", "domain name")
-	adhocCmd.PersistentFlags().StringVarP(&server, "server", "s", "", "dns server ip")
-	adhocCmd.PersistentFlags().StringVarP(&port, "port", "p", "53", "dns server port")
-	adhocCmd.PersistentFlags().IntVarP(&random, "random", "r", 5, "prefix random subdomain length")
-	adhocCmd.PersistentFlags().StringVarP(&querytype, "querytype", "q", "", "random dns query type empty is random type")
+	adhocCmd.Flags().DurationVarP(&duration, "duration", "D", time.Second*60, "send out dns traffic duration")
+	adhocCmd.Flags().IntVarP(&qps, "qps", "Q", 100, "qps for dns traffic")
+	adhocCmd.Flags().StringVarP(&domain, "domain", "d", "", "domain name")
+	adhocCmd.Flags().StringVarP(&server, "server", "s", "", "dns server ip")
+	adhocCmd.Flags().StringVarP(&port, "port", "p", "53", "dns server port")
+	adhocCmd.Flags().IntVarP(&random, "random", "r", 5, "prefix random subdomain length")
+	adhocCmd.Flags().StringVarP(&querytype, "querytype", "q", "", "random dns query type empty is random type")
 }
 
 var adhocCmd = &cobra.Command{

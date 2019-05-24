@@ -84,9 +84,9 @@ func index(w http.ResponseWriter, req *http.Request) {
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	config := core.GetGlobalConfig()
-	if config.JobConfig.Status != core.StatusStopped {
+	if config.Status != core.StatusStopped {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
-			Error:  "job is already started",
+			Error:  "benchmark is not ready",
 			ID:     config.JobID,
 			Status: config.GetCurrentJobStatusString(),
 		})
@@ -110,7 +110,6 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	config.JobConfig = &job
-
 	if config.IsMaster == true {
 		nodeManager := core.GetNodeManager()
 		err := core.GetDBHandler().CreateDNSQuery(config)

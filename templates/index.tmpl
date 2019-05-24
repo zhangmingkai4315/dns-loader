@@ -229,38 +229,38 @@
                                 <tr>
                                     <td>
                                         <i class="fa fa-hdd-o" aria-hidden="true"></i> 
-                                        {{$value.ConnectionInfo}}
+                                        {{$value.IPAddrWithPort}}
                                     </td>
                                     {{if $value.Live }}
-                                    <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                    <td class="agent-ping" data-item="{{$value.IPAddrWithPort}}">
                                         <i class="fa fa-2x fa-heartbeat ping-success" aria-hidden="true"></i>
                                     </td>
                                     {{ else }}
-                                     <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                     <td class="agent-ping" data-item="{{$value.IPAddrWithPort}}">
                                         <i class="fa fa-2x fa-heartbeat ping-fail" aria-hidden="true"></i>
                                     </td>
                                     {{ end }}
                                     {{if $value.Enable }}
-                                    <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                    <td class="agent-ping" data-item="{{$value.IPAddrWithPort}}">
                                         <i class="fa fa-2x fa-check-square-o ping-success" aria-hidden="true"></i>
                                     </td>
                                     {{ else }}
-                                     <td class="agent-ping" data-item="{{$value.ConnectionInfo}}">
+                                     <td class="agent-ping" data-item="{{$value.IPAddrWithPort}}">
                                         <i class="fa fa-2x fa-ban ping-fail" aria-hidden="true"></i>
                                     </td>
                                     {{ end }}
-                                    <td class="agent-running" data-item="{{$value.ConnectionInfo}}">
+                                    <td class="agent-running" data-item="{{$value.IPAddrWithPort}}">
                                         <i class="fa fa-2x fa-spinner fa-pulse running-success hide" aria-hidden="true"></i>
                                     </td>
                                     <td>
                                         {{ if $value.Enable }}
-                                        <button class="btn function-btn" id="disable-agent" data-item="{{$value.ConnectionInfo}}">
+                                        <button class="btn function-btn" id="disable-agent" data-item="{{$value.IPAddrWithPort}}">
                                             <i class="fa fa-eye-slash" aria-hidden="true"></i> Disable</button>
                                         {{ else }}
-                                        <button class="btn function-btn" id="enable-agent" data-item="{{$value.ConnectionInfo}}">
+                                        <button class="btn function-btn" id="enable-agent" data-item="{{$value.IPAddrWithPort}}">
                                             <i class="fa fa-eye-slash" aria-hidden="true"></i> Enable </button>
                                         {{ end }}
-                                        <button class="btn function-btn warning-btn" id="delete-agent" data-item="{{$value.ConnectionInfo}}">
+                                        <button class="btn function-btn warning-btn" id="delete-agent" data-item="{{$value.IPAddrWithPort}}">
                                             <i class="fa fa-trash" aria-hidden="true"></i> Delete</button>
                                     </td>
                                 </tr>
