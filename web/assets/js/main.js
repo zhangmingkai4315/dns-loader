@@ -43,6 +43,7 @@ function validateConfig(result) {
     }
     result["qps"] = isNaN(parseInt(result["qps"])) ? 100 : parseInt(result["qps"])
     result["max_query"] = isNaN(parseInt(result["max_query"])) ? 0 : parseInt(result["max_query"])
+    result["client_number"] = isNaN(parseInt(result["client_number"])) ? 1 : parseInt(result["client_number"])
     if (result["qps"] <= 0) {
         toastr.error('QPS number should be larger than 0', 'QPS Error')
         return false

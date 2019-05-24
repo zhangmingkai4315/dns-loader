@@ -69,6 +69,7 @@ type JobConfig struct {
 	JobID              string `json:"job_id" valid:"uuid,optional"`
 	Duration           string `json:"duration" valid:"-"`
 	QPS                uint32 `json:"qps" valid:"-"`
+	ClientNumber       int    `json:"client_number" valid:"-"`
 	MaxQuery           uint64 `json:"max_query" valid:"-"`
 	Server             string `json:"server" valid:"ip,optional"`
 	Port               string `json:"port" valid:"port,optional"`

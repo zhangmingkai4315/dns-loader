@@ -2,6 +2,7 @@ package core
 
 import (
 	// "bytes"
+	"math/rand"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -11,18 +12,28 @@ import (
 
 // DNSClient hold the loader configuration setting and connection
 type DNSClient struct {
-	packet *dns.DNSPacket
-	Conn   net.Conn
+	packet  *dns.DNSPacket
+	Conn    []net.Conn
+	NumConn int
 }
 
 // NewUDPDNSClient create a new DNSClient instance
 func NewUDPDNSClient(app *AppController) (dnsclient *DNSClient, err error) {
-	dnsclient = &DNSClient{}
-	conn, err := net.Dial("udp", app.Server+":"+app.Port)
-	if err != nil {
-		return nil, err
+	dnsclient = &DNSClient{
+		Conn:    []net.Conn{},
+		NumConn: 0,
 	}
-	dnsclient.Conn = conn
+
+	clientNumber := app.JobConfig.ClientNumber
+	for i := 0; i < clientNumber; i++ {
+		conn, err := net.Dial("udp", app.Server+":"+app.Port)
+		if err != nil {
+			return nil, err
+		}
+		dnsclient.Conn = append(dnsclient.Conn, conn)
+	}
+	dnsclient.NumConn = clientNumber
+
 	log.Println("new dns loader client success")
 	err = dnsclient.InitPacket(app.JobConfig)
 	if err != nil {
@@ -81,7 +92,8 @@ func (client *DNSClient) BuildReq(job *JobConfig) []byte {
 
 // Call func will be called by schedual each time
 func (client *DNSClient) Call(req []byte) {
-	_, err := client.Conn.Write(req)
+	n := rand.Intn(client.NumConn)
+	_, err := client.Conn[n].Write(req)
 	if err != nil {
 		log.Printf("send dns query Failed:%s", err)
 		return
