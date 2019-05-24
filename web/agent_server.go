@@ -15,10 +15,10 @@ import (
 
 func getAgentStatus(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	config := core.GetGlobalConfig()
+	app := core.GetGlobalAppController()
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.JobID,
-		Status: config.GetCurrentJobStatusString(),
+		ID:     app.JobConfig.JobID,
+		Status: app.GetCurrentJobStatusString(),
 	})
 }
 

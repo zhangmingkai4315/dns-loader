@@ -12,20 +12,19 @@ import (
 // DNSClient hold the loader configuration setting and connection
 type DNSClient struct {
 	packet *dns.DNSPacket
-	Config *Configuration
 	Conn   net.Conn
 }
 
-// NewDNSClientWithConfig create a new DNSClient instance
-func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err error) {
-	dnsclient = &DNSClient{Config: config}
-	conn, err := net.Dial("udp", config.Server+":"+config.Port)
+// NewUDPDNSClient create a new DNSClient instance
+func NewUDPDNSClient(app *AppController) (dnsclient *DNSClient, err error) {
+	dnsclient = &DNSClient{}
+	conn, err := net.Dial("udp", app.Server+":"+app.Port)
 	if err != nil {
 		return nil, err
 	}
 	dnsclient.Conn = conn
 	log.Println("new dns loader client success")
-	err = dnsclient.InitPacket()
+	err = dnsclient.InitPacket(app.JobConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -33,26 +32,26 @@ func NewDNSClientWithConfig(config *Configuration) (dnsclient *DNSClient, err er
 }
 
 // InitPacket init a packet for dns query data
-func (client *DNSClient) InitPacket() error {
+func (client *DNSClient) InitPacket(job *JobConfig) error {
 	enableEDNS := false
 	enableDNSSEC := false
-	if client.Config.EnableEDNS == "true" {
+	if job.EnableEDNS == "true" {
 		enableEDNS = true
 	}
-	if client.Config.EnableDNSSEC == "true" {
+	if job.EnableDNSSEC == "true" {
 		enableDNSSEC = true
 	}
 
 	client.packet = new(dns.DNSPacket)
-	if client.Config.QueryType != "" {
-		queryTypeCode, err := dns.GetDNSTypeCodeFromString(client.Config.QueryType)
+	if job.QueryType != "" {
+		queryTypeCode, err := dns.GetDNSTypeCodeFromString(job.QueryType)
 		if err != nil {
 			log.Errorf("init packet fail: %s", err.Error())
 			return err
 		}
 		client.packet.InitialPacket(
-			client.Config.Domain,
-			client.Config.DomainRandomLength,
+			job.Domain,
+			job.DomainRandomLength,
 			queryTypeCode,
 			enableEDNS,
 			enableDNSSEC,
@@ -61,8 +60,8 @@ func (client *DNSClient) InitPacket() error {
 	}
 
 	client.packet.InitialPacket(
-		client.Config.Domain,
-		client.Config.DomainRandomLength,
+		job.Domain,
+		job.DomainRandomLength,
 		dns.TypeA,
 		enableEDNS,
 		enableDNSSEC,
@@ -72,8 +71,8 @@ func (client *DNSClient) InitPacket() error {
 }
 
 // BuildReq build new dns request for use later
-func (client *DNSClient) BuildReq() []byte {
-	randomDomain := dns.GenRandomDomain(client.Config.DomainRandomLength, client.Config.Domain)
+func (client *DNSClient) BuildReq(job *JobConfig) []byte {
+	randomDomain := dns.GenRandomDomain(job.DomainRandomLength, job.Domain)
 	if _, err := client.packet.UpdateSubDomainToBytes(randomDomain); err != nil {
 		log.Printf("%v\n", err)
 	}

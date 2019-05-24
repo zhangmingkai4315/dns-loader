@@ -190,7 +190,7 @@ func (manager *NodeManager) callStart(agent Agent, data interface{}) (err error)
 	}
 	config, ok := data.(JobConfig)
 	if ok != true {
-		return errors.New("config data fail to send")
+		return errors.New("config data fail to transfer to post data")
 	}
 	log.Infof("%+v", config)
 	jsonData, err := json.Marshal(config)

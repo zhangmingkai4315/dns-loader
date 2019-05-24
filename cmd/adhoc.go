@@ -39,29 +39,28 @@ var adhocCmd = &cobra.Command{
 	Short: "Run dnsloader in adhoc mode",
 	Long:  `Run dnsloader in adhoc mode using arguments to gen dns packets and quit the process when job done`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var config *core.Configuration
-		config = core.GetGlobalConfig()
-		config.Domain = domain
-		config.DomainRandomLength = random
-		config.QPS = uint32(qps)
-		config.MaxQuery = uint64(max)
-		config.Duration = duration.String()
-		config.Server = server
-		config.Port = port
+		app := core.GetGlobalAppController()
+		app.JobConfig.Domain = domain
+		app.JobConfig.DomainRandomLength = random
+		app.JobConfig.QPS = uint32(qps)
+		app.JobConfig.MaxQuery = uint64(max)
+		app.JobConfig.Duration = duration.String()
+		app.JobConfig.Server = server
+		app.JobConfig.Port = port
 		if enableEDNS == true {
-			config.EnableEDNS = "true"
+			app.JobConfig.EnableEDNS = "true"
 		} else {
-			config.EnableEDNS = "false"
+			app.JobConfig.EnableEDNS = "false"
 		}
 		if enableDNSSEC == true {
-			config.EnableDNSSEC = "true"
+			app.JobConfig.EnableDNSSEC = "true"
 		} else {
-			config.EnableDNSSEC = "false"
+			app.JobConfig.EnableDNSSEC = "false"
 		}
-		config.QueryType = querytype
-		if err := config.ValidateJobConfiguration(); err != nil {
+		app.JobConfig.QueryType = querytype
+		if err := app.JobConfig.ValidateJob(); err != nil {
 			log.Panicf("argument validation error:%s", err)
 		}
-		core.GenTrafficFromConfig(config)
+		core.GenTrafficFromConfig(app)
 	},
 }

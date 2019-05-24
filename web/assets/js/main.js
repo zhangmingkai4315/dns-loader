@@ -42,6 +42,7 @@ function validateConfig(result) {
         return false
     }
     result["qps"] = isNaN(parseInt(result["qps"])) ? 100 : parseInt(result["qps"])
+    result["max_query"] = isNaN(parseInt(result["max_query"])) ? 0 : parseInt(result["max_query"])
     if (result["qps"] <= 0) {
         toastr.error('QPS number should be larger than 0', 'QPS Error')
         return false
@@ -218,11 +219,9 @@ $(document).ready(function () {
     });
     $(".config-submit").click(function () {
         var result = getFormData($('form[name="config"]'))
-        debugger
         if (validateConfig(result) === false) {
             return
         }
-        debugger
         $.ajax({
             type: "POST",
             url: "/start",

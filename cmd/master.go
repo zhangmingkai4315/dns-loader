@@ -34,7 +34,7 @@ func init() {
 	masterCmd.Flags().StringVar(&dbFile, "dbfile", "app.db", "database file for dns loader app(create automatic)")
 }
 
-func initMasterMode(cfgFile string, dbfile string) *core.Configuration {
+func initMasterMode(cfgFile string, dbfile string) *core.AppController {
 	if cfgFile == "" {
 		// Find current application directory.
 		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -44,7 +44,7 @@ func initMasterMode(cfgFile string, dbfile string) *core.Configuration {
 		cfgFile = filepath.Join(dir, "config.ini")
 	}
 	var err error
-	config, err := core.NewConfigurationFromFile(cfgFile)
+	app, err := core.NewAppControllerFromFile(cfgFile)
 	if err != nil {
 		log.Fatalf("load config file %s error: %s", cfgFile, err)
 	}
@@ -53,5 +53,5 @@ func initMasterMode(cfgFile string, dbfile string) *core.Configuration {
 		log.Fatalf("create database connection error: %s", err.Error())
 	}
 	log.Infof("using sqlite as app database filename is %s", dbfile)
-	return config
+	return app
 }

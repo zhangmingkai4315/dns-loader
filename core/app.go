@@ -34,20 +34,20 @@ type AppConfig struct {
 	ConfigFileHandler *ini.File
 }
 
-// LoadAppConfigurationFromFile read a appConfig.ini file from local file system
+// NewAppConfigFromFile read a appConfig.ini file from local file system
 // and return the AppConfig object
-func LoadAppConfigurationFromFile(filename string) (*AppConfig, error) {
+func NewAppConfigFromFile(filename string) (*AppConfig, error) {
 	appConfig := AppConfig{}
 	if strings.HasSuffix(filename, ".ini") == false {
-		return nil, errors.New("Configuration file must be .ini file type")
+		return nil, errors.New("AppController file must be .ini file type")
 	}
 	cfg, err := ini.Load(filename)
 	if err != nil {
-		return nil, fmt.Errorf("Configuration file load error:%s", err.Error())
+		return nil, fmt.Errorf("AppController file load error:%s", err.Error())
 	}
 	appConfigSectionApp, err := cfg.GetSection("App")
 	if err != nil {
-		return nil, fmt.Errorf("Load app appConfiguration file section [App] error:%s", err.Error())
+		return nil, fmt.Errorf("Load app appAppController file section [App] error:%s", err.Error())
 	}
 	if appConfigSectionApp.HasKey("user") {
 		appConfig.User = appConfigSectionApp.Key("user").String()
@@ -64,7 +64,7 @@ func LoadAppConfigurationFromFile(filename string) (*AppConfig, error) {
 	return &appConfig, nil
 }
 
-// JobConfig hold the job appConfiguration
+// JobConfig hold the job appAppController
 type JobConfig struct {
 	JobID              string `json:"job_id" valid:"uuid,optional"`
 	Duration           string `json:"duration" valid:"-"`
@@ -79,8 +79,8 @@ type JobConfig struct {
 	QueryType          string `json:"query_type" valid:"-"`
 }
 
-//NewJobConfig create a init job for appConfigration
-func NewJobConfig() *JobConfig {
+//NewDefaultJobConfig create a init job for appConfigration
+func NewDefaultJobConfig() *JobConfig {
 	return &JobConfig{
 		Port:               DefaultPort,
 		QPS:                DefaultQPS,
@@ -89,8 +89,8 @@ func NewJobConfig() *JobConfig {
 	}
 }
 
-// ValidateJobConfiguration validate the job config
-func (jobConfig *JobConfig) ValidateJobConfiguration() error {
+// ValidateJob validate the job config
+func (jobConfig *JobConfig) ValidateJob() error {
 	_, err := govalidator.ValidateStruct(jobConfig)
 	if err != nil {
 		return err
@@ -111,63 +111,66 @@ func (jobConfig *JobConfig) ValidateJobConfiguration() error {
 	return nil
 }
 
-// Configuration define all appConfig for this app
-type Configuration struct {
+// AppController hold all infomation and control interface for this app
+type AppController struct {
 	sync.RWMutex
 	*JobConfig
 	*AppConfig
+	LoadManager
+	LoadCaller
 	Status   uint32
 	IsMaster bool
 }
 
-var globalConfig *Configuration
+var appController *AppController
 
-// NewConfigurationFromFile load the appConfiguration and save to global variable
-func NewConfigurationFromFile(file string) (*Configuration, error) {
-	appConfig, err := LoadAppConfigurationFromFile(file)
+// NewAppControllerFromFile load the AppController and save to global variable
+func NewAppControllerFromFile(file string) (*AppController, error) {
+	appConfig, err := NewAppConfigFromFile(file)
 	if err != nil {
 		return nil, err
 	}
-	config := &Configuration{
+	controller := &AppController{
 		AppConfig: appConfig,
-		JobConfig: NewJobConfig(),
+		JobConfig: NewDefaultJobConfig(),
 		IsMaster:  true,
 		Status:    StatusStopped,
 	}
-	if err = config.ValidateJobConfiguration(); err != nil {
+	if err = controller.ValidateJob(); err != nil {
 		return nil, err
 	}
-	globalConfig = config
-	return config, nil
+	appController = controller
+	return controller, nil
 }
 
-// GetGlobalConfig return current appConfiguration
-func GetGlobalConfig() *Configuration {
-	if globalConfig == nil {
-		globalConfig = &Configuration{
-			JobConfig: NewJobConfig(),
+// GetGlobalAppController return current appAppController
+func GetGlobalAppController() *AppController {
+	if appController == nil {
+		appController = &AppController{
+			JobConfig: NewDefaultJobConfig(),
 			IsMaster:  false,
+			Status:    StatusStopped,
 		}
 	}
-	return globalConfig
+	return appController
 }
 
 // GetCurrentJobStatus return current task running status
-func (config *Configuration) GetCurrentJobStatus() uint32 {
+func (config *AppController) GetCurrentJobStatus() uint32 {
 	config.RLock()
 	defer config.RUnlock()
 	return config.Status
 }
 
 // GetCurrentJobStatusString return the readable string
-func (config *Configuration) GetCurrentJobStatusString() string {
+func (config *AppController) GetCurrentJobStatusString() string {
 	code := config.GetCurrentJobStatus()
 	codeString, _ := StatusToString[code]
 	return codeString
 }
 
 // SetCurrentJobStatus change the status of current task
-func (config *Configuration) SetCurrentJobStatus(status uint32) error {
+func (config *AppController) SetCurrentJobStatus(status uint32) error {
 	config.Lock()
 	defer config.Unlock()
 	config.Status = status

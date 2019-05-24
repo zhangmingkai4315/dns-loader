@@ -65,17 +65,17 @@ func GetDBHandler() *DBHandler {
 	return dbHander
 }
 
-// CreateDNSQuery save a new dns query info
-func (dbHander *DBHandler) CreateDNSQuery(config *Configuration) error {
-	jobConfig := config.JobConfig
+// CreateDNSQueryHistory save a new dns query info
+func (dbHander *DBHandler) CreateDNSQueryHistory(appController *AppController) error {
+	jobConfig := appController.JobConfig
 	dnsQuery := DNSQuery{
 		JobConfig: *jobConfig,
 	}
 	return dbHander.Model(&DNSQuery{}).Save(&dnsQuery).Error
 }
 
-// GetHistoryInfo return DNSQuery for datatables
-func (dbHander *DBHandler) GetHistoryInfo(start, length int, search string) ([]DNSQuery, error) {
+// GetDNSQueryHistory return DNSQuery for datatables
+func (dbHander *DBHandler) GetDNSQueryHistory(start, length int, search string) ([]DNSQuery, error) {
 	data := []DNSQuery{}
 	err := dbHander.Order("id desc").Limit(length).Offset(start).Where("server LIKE ? or domain Like ?", "%"+search+"%", "%"+search+"%").Find(&data).Error
 	if err != nil && gorm.IsRecordNotFoundError(err) == false {

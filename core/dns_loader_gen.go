@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -11,8 +13,46 @@ import (
 	"go.uber.org/ratelimit"
 )
 
-//GloablGenerator define global control object
-var GloablGenerator LoadManager
+// LoadParams will be used to new a loader instance with this param
+type LoadParams struct {
+	Caller   LoadCaller
+	Timeout  time.Duration
+	QPS      uint32
+	Max      uint64
+	Duration time.Duration
+}
+
+// Info return the basic info of lodaer params
+func (param *LoadParams) Info() string {
+	return fmt.Sprintf("current loader[qps=%d, durations=%v,timeout=%v]", param.QPS, param.Duration, param.Timeout)
+}
+
+//ValidCheck function
+func (param *LoadParams) ValidCheck() error {
+	var errMsgs []string
+	if param.Caller == nil {
+		errMsgs = append(errMsgs, "invalid caller!")
+	}
+	if param.Timeout == 0 {
+		errMsgs = append(errMsgs, "invalid timeout!")
+	}
+	if param.QPS <= 0 {
+		errMsgs = append(errMsgs, "invalid qps setting")
+	}
+	if param.Max < 0 {
+		errMsgs = append(errMsgs, "invalid max setting")
+	}
+	if param.Duration == 0 {
+		errMsgs = append(errMsgs, "invalid duration time")
+	}
+	if errMsgs != nil {
+		errMsg := strings.Join(errMsgs, " ")
+		log.Panicf("check the parameters not passed: %s", errMsg)
+	}
+	log.Infof("check the parameters success. (timeout=%s, qps=%d, max=%d, duration=%s)",
+		param.Timeout, param.QPS, param.Max, param.Duration)
+	return nil
+}
 
 type dnsLoaderGen struct {
 	caller     LoadCaller
@@ -38,14 +78,14 @@ func (dlg *dnsLoaderGen) Start() bool {
 		return false
 	}
 	atomic.StoreUint32(&dlg.status, StatusStart)
-	config := GetGlobalConfig()
-	config.SetCurrentJobStatus(StatusStart)
+	app := GetGlobalAppController()
+	app.SetCurrentJobStatus(StatusStart)
 	if dlg.qps > 0 {
 		interval := time.Duration(1e9 / dlg.qps)
 		log.Infof("setting throttle %v", interval)
 	}
 	atomic.StoreUint32(&dlg.status, StatusRunning)
-	config.SetCurrentJobStatus(StatusRunning)
+	app.SetCurrentJobStatus(StatusRunning)
 	log.Infoln("create new thread to receive dns data from server")
 	go func() {
 		// recive data from connections
@@ -73,8 +113,8 @@ func (dlg *dnsLoaderGen) Start() bool {
 func (dlg *dnsLoaderGen) prepareStop(err error) {
 	log.Printf("prepare to stop load test [%s]", err)
 	atomic.StoreUint32(&dlg.status, StatusStopping)
-	config := GetGlobalConfig()
-	config.SetCurrentJobStatus(StatusStopping)
+	app := GetGlobalAppController()
+	app.SetCurrentJobStatus(StatusStopping)
 	log.Infoln("doing calculation work")
 	runningTime := time.Since(dlg.startTime)
 	managerCounter := dlg.CallCount()
@@ -91,11 +131,13 @@ func (dlg *dnsLoaderGen) prepareStop(err error) {
 	}
 	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", unknown, float64(unknown*100)/float64(dlg.CallCount()))
 	atomic.StoreUint32(&dlg.status, StatusStopped)
-	config.SetCurrentJobStatus(StatusStopped)
+	app.SetCurrentJobStatus(StatusStopped)
 	log.Info("stop success!")
 }
 
 func (dlg *dnsLoaderGen) generatorLoad(limiter ratelimit.Limiter) {
+	app := GetGlobalAppController()
+	job := app.JobConfig
 	for {
 		select {
 		case <-dlg.ctx.Done():
@@ -104,7 +146,7 @@ func (dlg *dnsLoaderGen) generatorLoad(limiter ratelimit.Limiter) {
 		default:
 		}
 		limiter.Take()
-		rawRequest := dlg.caller.BuildReq()
+		rawRequest := dlg.caller.BuildReq(job)
 		dlg.caller.Call(rawRequest)
 		atomic.AddUint64(&dlg.callCount, 1)
 	}
@@ -115,8 +157,8 @@ func (dlg *dnsLoaderGen) Stop() bool {
 		&dlg.status, StatusRunning, StatusStopping) {
 		return false
 	}
-	config := GetGlobalConfig()
-	config.SetCurrentJobStatus(StatusStopping)
+	app := GetGlobalAppController()
+	app.SetCurrentJobStatus(StatusStopping)
 	dlg.cancelFunc()
 	for {
 		if atomic.LoadUint32(&dlg.status) == StatusStopped {
@@ -153,13 +195,13 @@ func NewDNSLoaderGenerator(param LoadParams) (LoadManager, error) {
 
 // GenTrafficFromConfig function will do traffic generate job
 // from configuration
-func GenTrafficFromConfig(config *Configuration) error {
-	dnsclient, err := NewDNSClientWithConfig(config)
+func GenTrafficFromConfig(appController *AppController) error {
+	dnsclient, err := NewUDPDNSClient(appController)
 	if err != nil {
 		log.Errorf("create dns client fail:%s", err)
 		return err
 	}
-	duration, _ := time.ParseDuration(config.JobConfig.Duration)
+	duration, _ := time.ParseDuration(appController.JobConfig.Duration)
 	if err != nil {
 		log.Errorf("parse user input duration fail :%s", err)
 		return err
@@ -167,8 +209,8 @@ func GenTrafficFromConfig(config *Configuration) error {
 	param := LoadParams{
 		Caller:   dnsclient,
 		Timeout:  1000 * time.Millisecond,
-		QPS:      config.QPS,
-		Max:      config.MaxQuery,
+		QPS:      appController.QPS,
+		Max:      appController.MaxQuery,
 		Duration: duration,
 	}
 	log.Infof("initialize load %s", param.Info())
@@ -177,7 +219,7 @@ func GenTrafficFromConfig(config *Configuration) error {
 		log.Errorf("load generator initialization fail :%s", err)
 		return err
 	}
-	GloablGenerator = gen
+	appController.LoadManager = gen
 	gen.Start()
 	return nil
 }

@@ -38,7 +38,7 @@ func auth(f func(w http.ResponseWriter, req *http.Request)) func(w http.Response
 
 }
 
-func login(config *core.Configuration) func(w http.ResponseWriter, req *http.Request) {
+func login(app *core.AppController) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		session, _ := store.Get(req, "dns-loader")
 		if user, ok := session.Values["username"].(string); ok && user != "" {
@@ -48,7 +48,7 @@ func login(config *core.Configuration) func(w http.ResponseWriter, req *http.Req
 		if req.Method == "POST" {
 			user := req.FormValue("username")
 			password := req.FormValue("password")
-			if user == config.User && password == config.Password {
+			if user == app.AppConfig.User && password == app.AppConfig.Password {
 				session.Values["username"] = user
 				session.Save(req, w)
 				http.Redirect(w, req, "/", 302)
@@ -83,13 +83,14 @@ func index(w http.ResponseWriter, req *http.Request) {
 
 func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	config := core.GetGlobalConfig()
-	if config.Status != core.StatusStopped {
+	app := core.GetGlobalAppController()
+	if app.Status != core.StatusStopped {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error:  "benchmark is not ready",
-			ID:     config.JobID,
-			Status: config.GetCurrentJobStatusString(),
+			ID:     app.JobID,
+			Status: app.GetCurrentJobStatusString(),
 		})
+		log.Errorln("start fail: benchmark is not ready")
 		return
 	}
 	job := core.JobConfig{}
@@ -100,61 +101,67 @@ func startDNSTraffic(w http.ResponseWriter, req *http.Request) {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error: "decode request infomation fail",
 		})
+		log.Errorf("decode post request infomation fail:%s", err)
 		return
 	}
-	err = job.ValidateJobConfiguration()
+	err = job.ValidateJob()
 	if err != nil {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error: err.Error(),
 		})
+		log.Errorf("validate post infomation fail:%s", err)
 		return
 	}
-	config.JobConfig = &job
-	if config.IsMaster == true {
+	app.JobConfig = &job
+	if app.IsMaster == true {
 		nodeManager := core.GetNodeManager()
-		err := core.GetDBHandler().CreateDNSQuery(config)
+		err := core.GetDBHandler().CreateDNSQueryHistory(app)
 		if err != nil {
 			log.Errorf("save query histroy fail:%s", err)
 		}
+		log.Infoln("master send new query job to agents")
 		go nodeManager.Call(core.Start, job)
+	} else {
+		log.Infof("agent receive new query job from %s", req.RemoteAddr)
 	}
 
-	go core.GenTrafficFromConfig(config)
+	go core.GenTrafficFromConfig(app)
+
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.JobID,
-		Status: config.GetCurrentJobStatusString(),
+		ID:     app.JobConfig.JobID,
+		Status: app.GetCurrentJobStatusString(),
 	})
 }
 
 func stopDNSTraffic(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
-	config := core.GetGlobalConfig()
-	if core.GloablGenerator == nil || core.GloablGenerator.Status() != core.StatusRunning {
+	app := core.GetGlobalAppController()
+	if app.LoadManager == nil || app.LoadManager.Status() != core.StatusRunning {
 		r.JSON(w, http.StatusBadRequest, JSONResponse{
 			Error: "job is already stopped",
 		})
 		return
 	}
-	if stopStatus := core.GloablGenerator.Stop(); true != stopStatus {
+	if stopStatus := app.LoadManager.Stop(); true != stopStatus {
 		r.JSON(w, http.StatusInternalServerError, JSONResponse{
 			Error: "server fail, please try again later",
 		})
 		return
 	}
-	if config.IsMaster == true {
+	if app.IsMaster == true {
 		nodeManager := core.GetNodeManager()
 		go nodeManager.Call(core.Kill, nil)
 	}
 	r.JSON(w, http.StatusOK, JSONResponse{
-		ID:     config.JobID,
-		Status: config.GetCurrentJobStatusString(),
+		ID:     app.JobID,
+		Status: app.GetCurrentJobStatusString(),
 	})
 }
 
 func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 	r := render.New(render.Options{})
 	nodeManager := core.GetNodeManager()
-	config := core.GetGlobalConfig()
+	app := core.GetGlobalAppController()
 	data, err := MessagesHub.Get()
 	if err != nil {
 		r.JSON(w, http.StatusServiceUnavailable, JSONResponse{Error: err.Error()})
@@ -173,8 +180,8 @@ func getCurrentStatus(w http.ResponseWriter, req *http.Request) {
 	}
 	r.JSON(w, http.StatusOK, JSONResponse{
 		CurrentMessages: messages,
-		ID:              config.JobID,
-		Status:          config.GetCurrentJobStatusString(),
+		ID:              app.JobID,
+		Status:          app.GetCurrentJobStatusString(),
 		NodeInfos:       nodeInfos,
 	})
 }
@@ -251,7 +258,7 @@ func getQueryHistory(w http.ResponseWriter, req *http.Request) {
 	start, _ := strconv.Atoi(req.URL.Query().Get("start"))
 	draw, _ := strconv.Atoi(req.URL.Query().Get("draw"))
 	length, _ := strconv.Atoi(req.URL.Query().Get("length"))
-	response, err := dbHandler.GetHistoryInfo(start, length, search)
+	response, err := dbHandler.GetDNSQueryHistory(start, length, search)
 	if err != nil {
 		r.JSON(w, http.StatusOK, map[string]interface{}{
 			"error": err.Error(),
@@ -266,15 +273,15 @@ func getQueryHistory(w http.ResponseWriter, req *http.Request) {
 
 // NewServer function create the http api
 func NewServer() error {
-	config := core.GetGlobalConfig()
-	key := []byte(config.AppSecrect)
+	app := core.GetGlobalAppController()
+	key := []byte(app.AppSecrect)
 
 	store = sessions.NewCookieStore(key)
 	r := mux.NewRouter()
 	r.HandleFunc("/", auth(index)).Methods("GET")
 	r.HandleFunc("/logout", logout).Methods("POST", "GET")
 	r.HandleFunc("/history", auth(getQueryHistory)).Methods("GET")
-	r.HandleFunc("/login", login(config)).Methods("GET", "POST")
+	r.HandleFunc("/login", login(app)).Methods("GET", "POST")
 	r.HandleFunc("/nodes", auth(addNode)).Methods("POST")
 	r.HandleFunc("/update-node", auth(updateNodeEnableStatus)).Methods("POST")
 	r.HandleFunc("/nodes", auth(deleteNode)).Methods("DELETE")
@@ -282,6 +289,6 @@ func NewServer() error {
 	r.HandleFunc("/stop", auth(stopDNSTraffic)).Methods("GET")
 	r.HandleFunc("/status", auth(getCurrentStatus)).Methods("GET")
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public", http.FileServer(http.Dir("./web/assets"))))
-	err := http.ListenAndServe(config.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
+	err := http.ListenAndServe(app.AppConfig.HTTPServer, http.TimeoutHandler(r, time.Second*10, "timeout"))
 	return err
 }
