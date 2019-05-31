@@ -18,6 +18,7 @@ const (
 	DefaultRandomLength = 0
 	DefaultQPS          = 100
 	DefaultMaxQuery     = 0
+	DefaultProtocol     = "udp"
 )
 
 func init() {
@@ -68,6 +69,7 @@ func NewAppConfigFromFile(filename string) (*AppConfig, error) {
 type JobConfig struct {
 	JobID              string `json:"job_id" valid:"uuid,optional"`
 	Duration           string `json:"duration" valid:"-"`
+	Protocol           string `json:"protocol" valid:"in(tcp|udp),optional"`
 	QPS                uint32 `json:"qps" valid:"-"`
 	ClientNumber       int    `json:"client_number" valid:"-"`
 	MaxQuery           uint64 `json:"max_query" valid:"-"`
@@ -87,6 +89,7 @@ func NewDefaultJobConfig() *JobConfig {
 		QPS:                DefaultQPS,
 		DomainRandomLength: DefaultRandomLength,
 		MaxQuery:           DefaultMaxQuery,
+		Protocol:           DefaultProtocol,
 	}
 }
 

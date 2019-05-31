@@ -20,6 +20,7 @@ type LoadParams struct {
 	QPS          uint32
 	Max          uint64
 	ClientNumber int
+	Protocol     string
 	Duration     time.Duration
 }
 
@@ -36,6 +37,9 @@ func (param *LoadParams) ValidCheck() error {
 	}
 	if param.Timeout == 0 {
 		errMsgs = append(errMsgs, "invalid timeout!")
+	}
+	if param.Protocol != "tcp" && param.Protocol != "udp" {
+		errMsgs = append(errMsgs, "invalid protocol [tcp, udp] only")
 	}
 	if param.QPS <= 0 {
 		errMsgs = append(errMsgs, "invalid qps setting")
@@ -56,18 +60,19 @@ func (param *LoadParams) ValidCheck() error {
 }
 
 type dnsLoaderGen struct {
-	caller     LoadCaller
-	timeout    time.Duration
-	qps        uint32
-	max        uint64
-	status     uint32
-	duration   time.Duration
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	callCount  uint64
-	workers    int
-	startTime  time.Time
-	result     []map[uint8]uint64
+	caller         LoadCaller
+	protocolOffset int
+	timeout        time.Duration
+	qps            uint32
+	max            uint64
+	status         uint32
+	duration       time.Duration
+	ctx            context.Context
+	cancelFunc     context.CancelFunc
+	callCount      uint64
+	workers        int
+	startTime      time.Time
+	result         []map[uint8]uint64
 }
 
 func (dlg *dnsLoaderGen) Start() bool {
@@ -91,13 +96,18 @@ func (dlg *dnsLoaderGen) Start() bool {
 	dnsclient := dlg.caller.(*DNSClient)
 	for i := 0; i < dnsclient.NumConn; i++ {
 		go func(index int) {
-			b := make([]byte, 4)
+			// reader := bufio.NewReader(dnsclient.Conn[index])
+			buf := make([]byte, 4096) // using small tmo buffer for demonstrating
 			for {
-				n, err := dnsclient.Conn[index].Read(b)
-				if err == nil && n > 0 {
-					code := b[3] & 0x0f
-					dlg.result[index][code] = dlg.result[index][code] + 1
+				n, err := dnsclient.Conn[index].Read(buf)
+				if err != nil || n == 0 {
+					log.Errorf("error = %v, n=%d", err, n)
+					break
 				}
+				log.Warnf("read n=%d", n)
+				code := buf[3+dlg.protocolOffset] & 0x0f
+				dlg.result[index][code] = dlg.result[index][code] + 1
+
 			}
 		}(i)
 	}
@@ -117,10 +127,7 @@ func (dlg *dnsLoaderGen) prepareStop() {
 	atomic.StoreUint32(&dlg.status, StatusStopping)
 	app := GetGlobalAppController()
 	app.SetCurrentJobStatus(StatusStopping)
-	dnsclient := dlg.caller.(*DNSClient)
-	for _, client := range dnsclient.Conn {
-		client.Close()
-	}
+	time.Sleep(2 * time.Second)
 	log.Infoln("doing calculation work")
 	runningTime := time.Since(dlg.startTime)
 	managerCounter := dlg.CallCount()
@@ -150,6 +157,10 @@ func (dlg *dnsLoaderGen) prepareStop() {
 	log.WithFields(log.Fields{"result": true}).Infof("status unknown:%d [%.2f]", unknown, float64(unknown*100)/float64(dlg.CallCount()))
 	atomic.StoreUint32(&dlg.status, StatusStopped)
 	app.SetCurrentJobStatus(StatusStopped)
+	dnsclient := dlg.caller.(*DNSClient)
+	for _, client := range dnsclient.Conn {
+		client.Close()
+	}
 	log.Info("stop success!")
 }
 
@@ -204,13 +215,18 @@ func NewDNSLoaderGenerator(param LoadParams) (LoadManager, error) {
 	if err := param.ValidCheck(); err != nil {
 		return nil, err
 	}
+	offset := 0
+	if param.Protocol == "tcp" {
+		offset = 2
+	}
 	dlg := &dnsLoaderGen{
-		caller:   param.Caller,
-		timeout:  param.Timeout,
-		qps:      param.QPS,
-		max:      param.Max,
-		duration: param.Duration,
-		status:   StatusStopped,
+		caller:         param.Caller,
+		timeout:        param.Timeout,
+		qps:            param.QPS,
+		protocolOffset: offset,
+		max:            param.Max,
+		duration:       param.Duration,
+		status:         StatusStopped,
 	}
 	for i := 0; i < param.ClientNumber; i++ {
 		r := make(map[uint8]uint64)
@@ -222,7 +238,7 @@ func NewDNSLoaderGenerator(param LoadParams) (LoadManager, error) {
 // GenTrafficFromConfig function will do traffic generate job
 // from configuration
 func GenTrafficFromConfig(appController *AppController) error {
-	dnsclient, err := NewUDPDNSClient(appController)
+	dnsclient, err := NewDNSClient(appController)
 	if err != nil {
 		log.Errorf("create dns client fail:%s", err)
 		return err
@@ -239,6 +255,7 @@ func GenTrafficFromConfig(appController *AppController) error {
 		Max:          appController.MaxQuery,
 		ClientNumber: appController.ClientNumber,
 		Duration:     duration,
+		Protocol:     appController.Protocol,
 	}
 	log.Infof("initialize load %s", param.Info())
 	gen, err := NewDNSLoaderGenerator(param)

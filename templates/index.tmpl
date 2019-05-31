@@ -79,6 +79,17 @@
                     <div class="info-body">
                         <form name="config">
                             <div class="item">
+                                <label class="theme-label">Protocol</label>
+                                    <label class="radio-container">TCP
+                                    <input type="radio" value="tcp" name="protocol">
+                                    <span class="checkmark"></span>
+                                    </label>
+                                    <label class="radio-container">UDP
+                                    <input type="radio"  checked="checked" value="udp" name="protocol">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="item">
                                 <label class="theme-label">Server</label>
                                 <input class="theme-input" type="text" placeholder="required" required name="server" value="">
                             </div>

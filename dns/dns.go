@@ -92,8 +92,9 @@ func (question *Question) pack(msg []byte, offset int, rawpack []byte) (int, err
 	return offset, nil
 }
 
-// DNSPacket holds a DNS packet
-type DNSPacket struct {
+// Packet holds a DNS packet
+type Packet struct {
+	Protocol       string
 	Header         DNSHeader
 	Questions      uint16
 	Answers        uint16
@@ -109,7 +110,7 @@ type DNSPacket struct {
 }
 
 // SetQuestion will set the basic dns packet infomation
-func (dns *DNSPacket) SetQuestion(name string, dnstype uint16, enableEDNS, enableDNSSEC bool) *DNSPacket {
+func (dns *Packet) SetQuestion(name string, dnstype uint16, enableEDNS, enableDNSSEC bool) *Packet {
 	dns.Header.ID = GenerateRandomID(true)
 	dns.Header.RecursionDesired = true
 	log.Infof("enable ends = %v enable dnssec = %v", enableEDNS, enableDNSSEC)
@@ -124,7 +125,7 @@ func (dns *DNSPacket) SetQuestion(name string, dnstype uint16, enableEDNS, enabl
 }
 
 // ToBytes will generate the first raw bytes of the dns packet
-func (dns *DNSPacket) ToBytes(edns bool, dnssec bool) (msg []byte, err error) {
+func (dns *Packet) ToBytes(edns bool, dnssec bool) (msg []byte, err error) {
 	var rawheader RawHeader
 	header := dns.Header
 	rawheader.ID = header.ID
@@ -162,7 +163,6 @@ func (dns *DNSPacket) ToBytes(edns bool, dnssec bool) (msg []byte, err error) {
 	formatName := PackDomainName(FqdnFormat(question[0].Name))
 	packLen := 12 + len(formatName) + 4
 	msg = make([]byte, packLen)
-
 	offset, err = rawheader.pack(msg, offset)
 	if err != nil {
 		return nil, err
@@ -178,27 +178,34 @@ func (dns *DNSPacket) ToBytes(edns bool, dnssec bool) (msg []byte, err error) {
 		msg = append(msg, ednsBytes...)
 		offset += 11
 	}
-	dns.RawByte = msg[:offset]
+
+	if dns.Protocol == "tcp" {
+		bs := make([]byte, 2)
+		binary.BigEndian.PutUint16(bs, uint16(offset))
+		msg = append(bs, msg...)
+		offset = offset + 2
+	}
 	dns.init = true
+	dns.RawByte = msg[:offset]
 	return msg[:offset], nil
 }
 
 // UpdateSubDomainToBytes function update the packet []byte with the new domain name
 // and return the new raw data
-func (dns *DNSPacket) UpdateSubDomainToBytes(domain string) (msg []byte, err error) {
+func (dns *Packet) UpdateSubDomainToBytes(domain string, offset int) (msg []byte, err error) {
 	// Get a new ID for packet
 	id := GenerateRandomID(true)
-	packUint16(id, dns.RawByte, 0)
+	// the first two oct is size of packet in tcp mode
+	packUint16(id, dns.RawByte, offset)
 	rawByte := dns.RawByte[:]
 	if len(rawByte) > 0 && dns.init == true {
 		formatName := PackDomainName(FqdnFormat(domain))
 		for i, v := range formatName {
-			rawByte[12+i] = v
+			rawByte[offset+12+i] = v
 		}
 		if dns.RandomType {
-			offset := 12 + len(formatName)
+			offset := offset + 12 + len(formatName)
 			packUint16(GenRandomType(), rawByte, offset)
-			// dns.RawByte[] = GenRandomType()
 		}
 		return rawByte, nil
 	}
@@ -206,13 +213,7 @@ func (dns *DNSPacket) UpdateSubDomainToBytes(domain string) (msg []byte, err err
 }
 
 // GeneratePacket will generate dns packet based user input arguments.
-// Arguments
-// 		domain: the dns domain name, if you want generate ***.jsmean.com. please fill domain=jsmean.com
-//  	length: the random subdomain length.
-// 		total: the total number of the dns packet ,if total == 0 no total limit (query)
-// 		timeout: shutdown when timeout, if timeout == 0 ,no timeout limit (second)
-//      qps: query per second
-func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps int) uint32 {
+func (dns *Packet) GeneratePacket(server string, total int, timeout int, qps int) uint32 {
 	var (
 		wg                sync.WaitGroup
 		MaxProducerNumber int
@@ -220,7 +221,6 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 		counter           uint32
 		jumpOut           bool
 		throttle          chan struct{}
-		// socketChannel     chan []byte
 	)
 	if server == "" {
 		server = DefaultServer
@@ -229,7 +229,7 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 	if runtime.NumCPU() == 1 {
 		MaxProducerNumber = 1
 	}
-	MaxProducerNumber = int(runtime.NumCPU() / 2)
+	MaxProducerNumber = int(runtime.NumCPU())
 	log.Printf("From main goroutine fork %d sub goroutine for generate\n", MaxProducerNumber)
 
 	wg.Add(MaxProducerNumber)
@@ -265,9 +265,12 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 
 	length := dns.RandomLength
 	domain := dns.OriginalDomain
+	offset := 0
+	if dns.Protocol == "tcp" {
+		offset = 2
+	}
 	for p := 0; p < MaxProducerNumber; p++ {
-
-		conn, err := net.Dial("udp", server)
+		conn, err := net.Dial(dns.Protocol, server)
 		log.Printf("Open a connection to dns server[%s]\n", server)
 
 		go func() {
@@ -291,7 +294,7 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 						<-throttle
 					}
 					randomDomain := GenRandomDomain(length, domain)
-					rawByte, err := dns.UpdateSubDomainToBytes(randomDomain)
+					rawByte, err := dns.UpdateSubDomainToBytes(randomDomain, offset)
 					if err != nil {
 						log.Panicf("%v", err)
 					}
@@ -310,7 +313,7 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 					}
 					randomDomain := GenRandomDomain(length, domain)
 					dns.lock.Lock()
-					if _, err := dns.UpdateSubDomainToBytes(randomDomain); err != nil {
+					if _, err := dns.UpdateSubDomainToBytes(randomDomain, offset); err != nil {
 						log.Panicf("%v", err)
 					}
 					conn.Write(dns.RawByte)
@@ -329,30 +332,17 @@ func (dns *DNSPacket) GeneratePacket(server string, total int, timeout int, qps 
 }
 
 // InitialPacket initial the basic setup
-func (dns *DNSPacket) InitialPacket(
+func (dns *Packet) InitialPacket(
+	protocol string,
 	domain string,
 	length int,
 	queryType uint16,
 	enableEDNS, enableDNSSEC bool,
 ) {
-	log.Infof("dns packet info :[domain=%s,length=%d,type=%d]", domain, length, queryType)
+	log.Infof("dns packet info :[protocol=%s, domain=%s,length=%d,type=%d]", protocol, domain, length, queryType)
+	dns.Protocol = protocol
 	dns.SetQuestion(FqdnFormat(GenRandomDomain(length, domain)), queryType, enableEDNS, enableDNSSEC)
 	dns.ToBytes(enableEDNS, enableDNSSEC)
 	dns.RandomLength = length
 	dns.OriginalDomain = domain
-}
-
-// Send will send the dns packet
-func (dns *DNSPacket) Send(server string) ([]byte, error) {
-	conn, err := net.Dial("udp", server)
-	if err != nil {
-		fmt.Println(err)
-	}
-	conn.Write(dns.RawByte)
-	// Close connect asap
-	defer conn.Close()
-	//simple Read
-	buffer := make([]byte, 512)
-	conn.Read(buffer)
-	return buffer, nil
 }
