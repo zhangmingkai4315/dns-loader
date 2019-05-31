@@ -272,18 +272,6 @@ func (dns *Packet) GeneratePacket(server string, total int, timeout int, qps int
 	for p := 0; p < MaxProducerNumber; p++ {
 		conn, err := net.Dial(dns.Protocol, server)
 		log.Printf("Open a connection to dns server[%s]\n", server)
-
-		go func() {
-			for {
-				data := make([]byte, 1024)
-				_, err = conn.Read(data)
-				if err != nil {
-					fmt.Printf("Fail to read udp message:%v\n", err)
-					continue
-				}
-			}
-		}()
-
 		go func() {
 			if err != nil {
 				fmt.Println(err)

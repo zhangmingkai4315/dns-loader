@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -96,7 +97,6 @@ func (dlg *dnsLoaderGen) Start() bool {
 	dnsclient := dlg.caller.(*DNSClient)
 	for i := 0; i < dnsclient.NumConn; i++ {
 		go func(index int) {
-			// reader := bufio.NewReader(dnsclient.Conn[index])
 			buf := make([]byte, 4096) // using small tmo buffer for demonstrating
 			for {
 				n, err := dnsclient.Conn[index].Read(buf)
@@ -105,9 +105,22 @@ func (dlg *dnsLoaderGen) Start() bool {
 					break
 				}
 				log.Warnf("read n=%d", n)
-				code := buf[3+dlg.protocolOffset] & 0x0f
-				dlg.result[index][code] = dlg.result[index][code] + 1
-
+				if dlg.protocolOffset != 0 {
+					//running in tcp mode
+					size := binary.BigEndian.Uint16(buf[:2])
+					offset := 0
+					for n >= (int(size) + 2 + offset) {
+						// multi dns packets in single tcp
+						log.Warnf("offset =%d", offset)
+						code := buf[3+dlg.protocolOffset] & 0x0f
+						dlg.result[index][code] = dlg.result[index][code] + 1
+						offset += int(size) + 2
+					}
+				} else {
+					// running in udp
+					code := buf[3+dlg.protocolOffset] & 0x0f
+					dlg.result[index][code] = dlg.result[index][code] + 1
+				}
 			}
 		}(i)
 	}
